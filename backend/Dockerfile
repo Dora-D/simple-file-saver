@@ -10,7 +10,7 @@ RUN npm install
 CMD ["npm", "run", "start:dev"]
 
 # Production
-FROM node:20 as production
+FROM node:20-alpine as production
 
 WORKDIR /app
 
