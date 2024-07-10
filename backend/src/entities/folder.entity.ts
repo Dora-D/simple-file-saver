@@ -21,13 +21,14 @@ export class Folder {
   @JoinColumn({ name: 'ownerId' })
   owner: User;
 
-  @ManyToOne(() => Folder, (folder) => folder.childFolders)
+  @ManyToOne(() => Folder, (folder) => folder.parentFolder)
   @JoinColumn({ name: 'parentFolderId' })
-  parentFolder: Folder;
+  parentFolder?: Folder;
 
-  @OneToMany(() => Folder, (folder) => folder.parentFolder)
-  childFolders: Folder[];
+  @OneToMany(() => Folder, (folder) => folder.childFolders)
+  childFolders?: Folder[];
 
   @OneToMany(() => File, (file) => file.folder)
-  files: File[];
+  @JoinColumn()
+  files?: File[];
 }

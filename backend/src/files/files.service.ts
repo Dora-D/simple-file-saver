@@ -35,7 +35,8 @@ export class FilesService {
     })) as User;
 
     const newFile = this.fileRepository.create({
-      ...createFileDto,
+      isPublic: createFileDto.isPublic,
+      folder: { id: createFileDto.folderId },
       owner: user,
       name: file.originalname.split('.')[0],
       type: file.mimetype,

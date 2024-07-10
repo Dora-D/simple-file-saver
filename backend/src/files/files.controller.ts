@@ -61,7 +61,7 @@ export class FilesController {
         filename: (req, file, cb) => {
           const filename: string = file.originalname.split('.')[0];
           const fileExtName: string = extname(file.originalname);
-          cb(null, `${filename}${fileExtName}`);
+          cb(null, `${filename}-${Date.now()}${fileExtName}`);
         },
       }),
     }),
@@ -72,6 +72,8 @@ export class FilesController {
     @Body() body: Omit<CreateFileDto, 'file'>,
     @GetCurrentUserId() userId: number,
   ) {
+    console.log(file);
+
     await this.fileService.create(file, body as CreateFileDto, userId);
     return res.status(HttpStatus.CREATED).send('File created');
   }
