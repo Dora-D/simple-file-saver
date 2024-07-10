@@ -7,19 +7,42 @@ import { ValidationPipe } from '@nestjs/common';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
+  app.setGlobalPrefix('api');
+  app.useGlobalPipes(new ValidationPipe());
+  app.use(cookieParser(process.env.JWT_SECRET));
+
   const config = new DocumentBuilder()
     .setTitle('File Management API')
     .setDescription('API documentation for file management system')
     .setVersion('1.0')
-    // .addBearerAuth() // If you're using JWT authentication
+    .addOAuth2(
+      {
+        type: 'oauth2',
+        flows: {
+          implicit: {
+            authorizationUrl: 'http://localhost:3001/api/auth/google',
+            scopes: {
+              email: 'Access to your email address',
+              profile: 'Access to your profile information',
+            },
+          },
+        },
+      },
+      'google-oauth2',
+    )
     .build();
 
   const document = SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup('swagger', app, document);
 
-  app.setGlobalPrefix('api');
-  app.useGlobalPipes(new ValidationPipe());
-  app.use(cookieParser(process.env.JWT_SECRET));
+  SwaggerModule.setup('swagger', app, document, {
+    useGlobalPrefix: true,
+    swaggerOptions: {
+      initOAuth: {
+        clientId: process.env.OAUTH_GOOGLE_ID,
+        usePkceWithAuthorizationCodeGrant: true,
+      },
+    },
+  });
 
   await app.listen(3001);
 }
