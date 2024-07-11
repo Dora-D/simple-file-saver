@@ -16,6 +16,10 @@ export class UsersService {
     return this.usersRepository.save(user);
   }
 
+  findOneByEmail(email: string) {
+    return this.findOne({ where: { email } });
+  }
+
   findOne(params: FindOneOptions<User> = {}) {
     return this.usersRepository.findOne(params);
   }
