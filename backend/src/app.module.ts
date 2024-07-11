@@ -7,6 +7,7 @@ import { AuthModule } from '@app/auth/auth.module';
 import { UsersModule } from '@app/users/users.module';
 import { FoldersModule } from '@app/folders/folders.module';
 import { FilesModule } from '@app/files/files.module';
+import { PermissionsModule } from '@app/permissions/permissions.module';
 
 @Module({
   imports: [
@@ -15,6 +16,7 @@ import { FilesModule } from '@app/files/files.module';
     UsersModule,
     FoldersModule,
     FilesModule,
+    PermissionsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
