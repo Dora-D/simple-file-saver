@@ -47,6 +47,7 @@ export class FoldersService {
 
     const newFolder = this.folderRepository.create({
       name: createFolderDto.name,
+      isPublic: createFolderDto.isPublic,
       owner: owner,
       parentFolder: parentFolder as Folder,
     });

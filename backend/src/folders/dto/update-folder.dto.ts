@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsNumber, IsOptional, IsString } from 'class-validator';
+import { IsBoolean, IsNumber, IsOptional, IsString } from 'class-validator';
 
 export class UpdateFolderDto {
   @ApiProperty({ description: 'New name of the folder', required: false })
@@ -8,10 +8,14 @@ export class UpdateFolderDto {
   name?: string;
 
   @ApiProperty({
-    description: 'New ID of the parent folder (if any)',
+    description: 'Id of the parent folder',
     required: false,
   })
   @IsOptional()
   @IsNumber()
   parentFolderId?: number;
+
+  @ApiProperty()
+  @IsBoolean()
+  isPublic: boolean;
 }
