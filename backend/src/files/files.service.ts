@@ -8,20 +8,21 @@ import {
   StreamableFile,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Like, Repository } from 'typeorm';
 import { CreateFileDto } from '@app/files/dto/create-file.dto';
 import { UsersService } from '@app/users/users.service';
 import { User } from '@app/entities/user.entity';
 import { Response } from 'express';
 import { createReadStream } from 'fs';
-import { join } from 'path';
 import { unlink } from 'fs/promises';
+import { copyFile } from 'fs/promises';
+import * as path from 'path';
 
 @Injectable()
 export class FilesService {
   constructor(
     @InjectRepository(File)
-    private fileRepository: Repository<File>,
+    private readonly fileRepository: Repository<File>,
     private readonly usersService: UsersService,
   ) {}
 
@@ -34,15 +35,29 @@ export class FilesService {
       where: { id: userId },
     })) as User;
 
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    const fileName = file.originalname;
+    const folderId = createFileDto.folderId;
+
+    const [uniqueFileName, fileExp] = await this.generateUniqueFileName(
+      fileName,
+      folderId,
+    );
+
     const newFile = this.fileRepository.create({
       isPublic: createFileDto.isPublic,
-      folder: { id: createFileDto.folderId },
+      folder: folderId ? { id: folderId } : undefined,
       owner: user,
-      name: file.originalname.split('.')[0],
+      name: uniqueFileName,
       type: file.mimetype,
       size: file.size,
       path: file.path,
+      exp: fileExp,
     });
+
     return this.fileRepository.save(newFile);
   }
 
@@ -64,10 +79,51 @@ export class FilesService {
     return file;
   }
 
+  async clone(fileId: number, userId: number) {
+    const file = await this.findOne(fileId, userId);
+
+    try {
+      const [newFileName] = await this.generateUniqueFileName(
+        file.name + file.exp,
+        file.folder?.id,
+      );
+
+      const newFilePath = `./uploads/${newFileName}-${Date.now()}${file.exp}`;
+      await copyFile(file.path, newFilePath);
+
+      const newFile = this.fileRepository.create({
+        exp: file.exp,
+        name: newFileName,
+        type: file.type,
+        size: file.size,
+        path: newFilePath,
+        isPublic: file.isPublic,
+        owner: file.owner,
+        folder: file.folder,
+      });
+
+      return await this.fileRepository.save(newFile);
+    } catch (error) {
+      throw new InternalServerErrorException('Failed to clone file');
+    }
+  }
+
   async update(id: number, updateFileDto: UpdateFileDto, userId: number) {
+    if (!updateFileDto.isPublic && !updateFileDto.name) {
+      return;
+    }
     const file = await this.findOne(id, userId);
 
-    file.name = updateFileDto.name ?? file.name;
+    let fileName = file.name;
+
+    if (updateFileDto.name) {
+      const [uniqueFileName] = await this.generateUniqueFileName(
+        updateFileDto.name + file.exp,
+      );
+      fileName = uniqueFileName;
+    }
+
+    file.name = fileName;
     file.isPublic = updateFileDto.isPublic ?? file.isPublic;
 
     return await this.fileRepository.save(file);
@@ -97,7 +153,7 @@ export class FilesService {
   async download(res: Response, id: number | string, userId: number) {
     const file = await this.findOne(+id, userId);
 
-    const stream = createReadStream(join(process.cwd(), file.path));
+    const stream = createReadStream(path.join(process.cwd(), file.path));
 
     const filePathArray = file.path.split('.');
 
@@ -110,9 +166,36 @@ export class FilesService {
     return new StreamableFile(stream);
   }
 
-  async getFileByFolderId(folderId: number): Promise<File[]> {
+  async getFileByFolderId(folderId: number) {
     return this.fileRepository.find({
       where: { folder: { id: folderId } },
     });
+  }
+
+  private async generateUniqueFileName(
+    originalName: string,
+    folderId?: number,
+  ): Promise<string[]> {
+    const fileExtName = path.extname(originalName);
+    const fileNameWithoutExt = originalName.replace(fileExtName, '');
+
+    const similarFiles = await this.fileRepository.find({
+      where: {
+        name: Like(`${fileNameWithoutExt}%`),
+        folder: folderId ? { id: folderId } : undefined,
+        exp: fileExtName,
+      },
+    });
+
+    let uniqueFileName = fileNameWithoutExt;
+
+    if (similarFiles.length) {
+      const lastSimilarFile = similarFiles[similarFiles.length - 1];
+      const match = lastSimilarFile.name.match(/\((\d+)\)$/);
+      const nextNumber = match ? parseInt(match[1], 10) + 1 : 1;
+      uniqueFileName = `${fileNameWithoutExt}(${nextNumber})`;
+    }
+
+    return [uniqueFileName, fileExtName];
   }
 }

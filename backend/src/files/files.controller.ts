@@ -72,8 +72,21 @@ export class FilesController {
     @Body() body: Omit<CreateFileDto, 'file'>,
     @GetCurrentUserId() userId: number,
   ) {
-    await this.fileService.create(file, body as CreateFileDto, userId);
-    return res.status(HttpStatus.CREATED).send('File created');
+    const createdFile = await this.fileService.create(
+      file,
+      body as CreateFileDto,
+      userId,
+    );
+    return res.status(HttpStatus.CREATED).send(createdFile);
+  }
+
+  @Post(':id/clone')
+  @ApiOperation({ summary: 'Clone file by ID' })
+  @ApiCreatedResponse({ description: 'File cloned successfully', type: File })
+  @ApiNotFoundResponse({ description: 'File not found' })
+  @ApiUnauthorizedResponse({ description: 'Unauthorized' })
+  async cloneFile(@Param('id') id: string, @GetCurrentUserId() userId: number) {
+    return await this.fileService.clone(+id, userId);
   }
 
   @Get(':id')
