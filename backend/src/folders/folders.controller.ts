@@ -49,6 +49,21 @@ export class FoldersController {
     return folder;
   }
 
+  @Post(':id/clone')
+  @ApiOperation({ summary: 'Clone folder by ID' })
+  @ApiCreatedResponse({
+    description: 'Folder cloned successfully',
+    type: Folder,
+  })
+  @ApiNotFoundResponse({ description: 'Folder not found' })
+  @ApiUnauthorizedResponse({ description: 'Unauthorized' })
+  async cloneFolder(
+    @Param('id') id: string,
+    @GetCurrentUserId() userId: number,
+  ) {
+    return this.folderService.clone(+id, userId);
+  }
+
   @Get(':id')
   @ApiOperation({ summary: 'Get folder by ID' })
   @ApiOkResponse({ description: 'Folder found', type: Folder })
