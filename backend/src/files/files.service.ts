@@ -87,9 +87,9 @@ export class FilesService {
 
     try {
       await unlink(file.path);
-
       await this.fileRepository.remove(file);
     } catch (error) {
+      console.error(error);
       throw new InternalServerErrorException('Failed to delete file');
     }
   }
@@ -108,5 +108,11 @@ export class FilesService {
     });
 
     return new StreamableFile(stream);
+  }
+
+  async getFileByFolderId(folderId: number): Promise<File[]> {
+    return this.fileRepository.find({
+      where: { folder: { id: folderId } },
+    });
   }
 }

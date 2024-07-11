@@ -25,10 +25,12 @@ export class Folder {
   @JoinColumn({ name: 'parentFolderId' })
   parentFolder?: Folder;
 
-  @OneToMany(() => Folder, (folder) => folder.childFolders)
-  childFolders?: Folder[];
+  @OneToMany(() => Folder, (folder) => folder.parentFolder, {
+    cascade: true,
+    onDelete: 'CASCADE',
+  })
+  childFolders: Folder[];
 
   @OneToMany(() => File, (file) => file.folder)
-  @JoinColumn()
   files?: File[];
 }

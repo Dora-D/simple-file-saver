@@ -13,7 +13,6 @@ import { FilesModule } from '@app/files/files.module';
     TypeOrmModule.forRoot(typeOrmConfig),
     AuthModule,
     UsersModule,
-    FilesModule,
     FoldersModule,
     FilesModule,
   ],

@@ -3,6 +3,7 @@ import { UsersService } from '@app/users/users.service';
 import {
   ForbiddenException,
   Injectable,
+  InternalServerErrorException,
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -10,6 +11,7 @@ import { Repository } from 'typeorm';
 
 import { CreateFolderDto } from '@app/folders/dto/create-folder.dto';
 import { UpdateFolderDto } from '@app/folders/dto/update-folder.dto';
+import { FilesService } from '@app/files/files.service';
 
 @Injectable()
 export class FoldersService {
@@ -17,6 +19,7 @@ export class FoldersService {
     @InjectRepository(Folder)
     private folderRepository: Repository<Folder>,
     private userService: UsersService,
+    private readonly filesService: FilesService,
   ) {}
 
   async create(createFolderDto: CreateFolderDto, userId: number) {
@@ -34,6 +37,7 @@ export class FoldersService {
           id: createFolderDto.parentFolderId,
           owner: owner,
         },
+        relations: ['childFolders'],
       });
 
       if (!parentFolder) {
@@ -47,17 +51,8 @@ export class FoldersService {
       parentFolder: parentFolder as Folder,
     });
 
-    if (parentFolder) {
-      let childFolders = [] as Folder[];
-
-      if (parentFolder.childFolders) {
-        childFolders = [...parentFolder.childFolders];
-      }
-
-      this.folderRepository.save({
-        ...parentFolder,
-        childFolders: [...childFolders, newFolder],
-      });
+    if (parentFolder?.childFolders) {
+      parentFolder.childFolders.push(newFolder);
     }
 
     return await this.folderRepository.save(newFolder);
@@ -90,11 +85,18 @@ export class FoldersService {
     return await this.folderRepository.save(folder);
   }
 
-  async remove(id: number, userId: number) {
-    const folder = await this.folderRepository.findOne({
+  private async getFolderByIdWithRelations(
+    id: number,
+    relations: string[] = ['owner', 'files', 'childFolders'],
+  ) {
+    return await this.folderRepository.findOne({
       where: { id },
-      relations: ['owner', 'files', 'childFolders'],
+      relations,
     });
+  }
+
+  async remove(id: number, userId: number) {
+    const folder = await this.getFolderByIdWithRelations(id);
 
     if (!folder) {
       throw new NotFoundException('Folder not found');
@@ -106,8 +108,30 @@ export class FoldersService {
       );
     }
 
-    // TODO: Implement logic to delete files and subfolders (if needed)
+    await this.deleteFolder(folder);
+  }
 
-    await this.folderRepository.remove(folder);
+  private async deleteFolder(folder: Folder) {
+    try {
+      const files = await this.filesService.getFileByFolderId(folder.id);
+
+      for (const file of files) {
+        await this.filesService.remove(file.id, folder.owner.id);
+      }
+
+      const childFolders = await this.folderRepository.find({
+        where: { parentFolder: { id: folder.id } },
+        relations: ['files', 'owner'],
+      });
+
+      for (const childFolder of childFolders) {
+        await this.deleteFolder(childFolder);
+      }
+
+      await this.folderRepository.remove(folder);
+    } catch (error) {
+      console.log(error);
+      throw new InternalServerErrorException('Failed to delete folder');
+    }
   }
 }

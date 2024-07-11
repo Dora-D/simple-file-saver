@@ -9,5 +9,6 @@ import { UsersModule } from '@app/users/users.module';
   imports: [TypeOrmModule.forFeature([File]), UsersModule],
   providers: [FilesService],
   controllers: [FilesController],
+  exports: [FilesService],
 })
 export class FilesModule {}
