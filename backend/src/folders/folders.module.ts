@@ -10,5 +10,6 @@ import { FilesModule } from '@app/files/files.module';
   imports: [TypeOrmModule.forFeature([File, Folder]), UsersModule, FilesModule],
   controllers: [FoldersController],
   providers: [FoldersService],
+  exports: [FoldersService],
 })
 export class FoldersModule {}
