@@ -1,10 +1,4 @@
-import {
-  Entity,
-  PrimaryGeneratedColumn,
-  Column,
-  OneToMany,
-  JoinColumn,
-} from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, OneToMany } from 'typeorm';
 import { File } from '@app/entities/file.entity';
 import { Folder } from '@app/entities/folder.entity';
 import { Permission } from '@app/entities/permission.entity';
@@ -29,14 +23,11 @@ export class User {
   email: string;
 
   @OneToMany(() => File, (file) => file.owner)
-  @JoinColumn()
   files: File[];
 
   @OneToMany(() => Folder, (folder) => folder.owner)
-  @JoinColumn()
   folders: Folder[];
 
   @OneToMany(() => Permission, (permission) => permission.user)
-  @JoinColumn()
   permissions: Permission[];
 }

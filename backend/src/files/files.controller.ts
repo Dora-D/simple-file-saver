@@ -72,8 +72,6 @@ export class FilesController {
     @Body() body: Omit<CreateFileDto, 'file'>,
     @GetCurrentUserId() userId: number,
   ) {
-    console.log(file);
-
     await this.fileService.create(file, body as CreateFileDto, userId);
     return res.status(HttpStatus.CREATED).send('File created');
   }
@@ -103,7 +101,7 @@ export class FilesController {
     @Res() res: Response,
   ) {
     await this.fileService.remove(+id, userId);
-    return res.status(HttpStatus.OK).send('Deleted');
+    return res.status(HttpStatus.OK).send('File Deleted');
   }
 
   @Put(':id')
