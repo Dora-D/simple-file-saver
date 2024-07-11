@@ -34,9 +34,9 @@ export class File {
   @JoinColumn({ name: 'ownerId' })
   owner: User;
 
-  @ManyToOne(() => Folder, (folder) => folder.files)
+  @ManyToOne(() => Folder, (folder) => folder.files, { nullable: true })
   @JoinColumn({ name: 'folderId' })
-  folder: Folder;
+  folder: Folder | null;
 
   @OneToMany(() => Permission, (permission) => permission.file)
   permissions: Permission[];
