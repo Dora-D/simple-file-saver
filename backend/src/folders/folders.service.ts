@@ -18,7 +18,7 @@ export class FoldersService {
   constructor(
     @InjectRepository(Folder)
     private folderRepository: Repository<Folder>,
-    private userService: UsersService,
+    private readonly userService: UsersService,
     private readonly filesService: FilesService,
   ) {}
 
