@@ -5,6 +5,8 @@ import { UsersService } from '@app/users/users.service';
 import {
   BadRequestException,
   ForbiddenException,
+  forwardRef,
+  Inject,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -27,7 +29,9 @@ export class PermissionsService {
     @InjectRepository(Permission)
     private permissionRepository: Repository<Permission>,
     private readonly userService: UsersService,
+    @Inject(forwardRef(() => FilesService))
     private readonly fileService: FilesService,
+    @Inject(forwardRef(() => FoldersService))
     private readonly folderService: FoldersService,
   ) {}
 

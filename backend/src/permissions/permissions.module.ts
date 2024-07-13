@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { forwardRef, Module } from '@nestjs/common';
 import { PermissionsController } from '@app/permissions/permissions.controller';
 import { FoldersModule } from '@app/folders/folders.module';
 import { Folder } from '@app/entities/folder.entity';
@@ -14,8 +14,8 @@ import { TypeOrmModule } from '@nestjs/typeorm';
   imports: [
     TypeOrmModule.forFeature([File, Folder, User, Permission]),
     UsersModule,
-    FilesModule,
-    FoldersModule,
+    forwardRef(() => FilesModule),
+    forwardRef(() => FoldersModule),
   ],
   controllers: [PermissionsController],
   providers: [PermissionsService],
