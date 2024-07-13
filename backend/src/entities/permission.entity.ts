@@ -9,10 +9,13 @@ import { User } from '@app/entities/user.entity';
 import { File } from '@app/entities/file.entity';
 import { Folder } from '@app/entities/folder.entity';
 
-export enum PermissionType {
+export enum EPermissionType {
   VIEW = 'view',
   EDIT = 'edit',
+  OWNER = 'owner',
 }
+
+export type PermissionType = EPermissionType.EDIT | EPermissionType.VIEW;
 
 @Entity()
 export class Permission {
@@ -37,8 +40,8 @@ export class Permission {
 
   @Column({
     type: 'enum',
-    enum: PermissionType,
-    default: PermissionType.VIEW,
+    enum: EPermissionType,
+    default: EPermissionType.VIEW,
   })
   type: PermissionType;
 }

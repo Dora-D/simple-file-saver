@@ -1,4 +1,4 @@
-import { Permission } from '@app/entities/permission.entity';
+import { EPermissionType, Permission } from '@app/entities/permission.entity';
 import { FilesService } from '@app/files/files.service';
 import { FoldersService } from '@app/folders/folders.service';
 import { UsersService } from '@app/users/users.service';
@@ -9,9 +9,17 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { FindManyOptions, Repository } from 'typeorm';
 import { CreatePermissionDto } from '@app/permissions/dto/permission.dto';
 import { UpdatePermissionDto } from '@app/permissions/dto/update-permission.dto';
+
+type ChekFilePermissionsArgumentTypes = Parameters<
+  (userId: number, fileId: number) => Promise<boolean>
+>;
+
+type ChekFolderPermissionsArgumentTypes = Parameters<
+  (userId: number, folderId: number) => Promise<boolean>
+>;
 
 @Injectable()
 export class PermissionsService {
@@ -25,55 +33,42 @@ export class PermissionsService {
 
   async create(
     createPermissionDto: CreatePermissionDto,
-    currentUserId: number,
+    userId: number,
   ): Promise<Permission> {
-    const user = await this.userService.findOneByEmail(
-      createPermissionDto.email,
-    );
-    if (!user) {
-      throw new NotFoundException('User not found');
-    }
-
-    let file = null;
-    let folder = null;
+    let fileId;
+    let folderId;
 
     if (createPermissionDto.fileId) {
-      file = await this.fileService.findOne(
-        createPermissionDto.fileId,
-        currentUserId,
-      );
-      if (!file || file.owner.id !== currentUserId) {
-        throw new ForbiddenException(
-          'You do not have permission to share this file',
-        );
-      }
+      this.checkUserFileOwner(userId, createPermissionDto.fileId);
+      fileId = createPermissionDto.fileId;
     } else if (createPermissionDto.folderId) {
-      folder = await this.folderService.findOne(
-        createPermissionDto.folderId,
-        currentUserId,
-      );
-      if (!folder || folder.owner.id !== currentUserId) {
-        throw new ForbiddenException(
-          'You do not have permission to share this file',
-        );
-      }
+      this.checkUserFolderOwner(userId, createPermissionDto.folderId);
+      folderId = createPermissionDto.folderId;
     } else {
       throw new BadRequestException(
         'Either fileId or folderId must be provided',
       );
     }
 
+    const user = await this.userService.findOneByEmail(
+      createPermissionDto.email,
+    );
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
     const permission = this.permissionRepository.create({
       user,
-      file,
-      folder,
+      file: fileId ? { id: fileId } : undefined,
+      folder: folderId ? { id: fileId } : undefined,
       type: createPermissionDto.type,
     });
 
     return await this.permissionRepository.save(permission);
   }
 
-  async findOne(id: number, currentUserId: number): Promise<Permission> {
+  async findOne(id: number, userId: number): Promise<Permission> {
     const permission = await this.permissionRepository.findOne({
       where: { id },
       relations: ['user', 'file', 'folder'],
@@ -83,39 +78,226 @@ export class PermissionsService {
       throw new NotFoundException('Permission not found');
     }
 
-    if (permission.user.id !== currentUserId) {
+    if (permission.user.id !== userId) {
       throw new ForbiddenException('You do not have permission to check this');
     }
 
     return permission;
   }
 
-  async findAll(currentUserId: number) {
-    return await this.permissionRepository.find({
-      where: { user: { id: currentUserId } },
+  async findAllByUserId(userId: number) {
+    const permissions = await this.findAll({
+      where: { user: { id: userId } },
       relations: ['file', 'folder'],
     });
+
+    if (!permissions.length) {
+      throw new NotFoundException('Permission not found');
+    }
+
+    return permissions;
+  }
+
+  async findAll(params: FindManyOptions<Permission> = {}) {
+    return await this.permissionRepository.find(params);
   }
 
   async update(
     id: number,
     updatePermissionDto: UpdatePermissionDto,
-    currentUserId: number,
+    userId: number,
   ): Promise<Permission> {
-    const permission = await this.findOne(id, currentUserId);
-
-    if (!permission) {
-      throw new NotFoundException('Permission not found');
-    }
+    const permission = await this.findOne(id, userId);
 
     Object.assign(permission, updatePermissionDto);
 
     return this.permissionRepository.save(permission);
   }
 
-  async remove(id: number, currentUserId: number) {
-    const permission = await this.findOne(id, currentUserId);
+  async remove(id: number, userId: number) {
+    const permission = await this.findOne(id, userId);
 
     await this.permissionRepository.remove(permission);
+  }
+
+  async checkUserFileOwner(...args: ChekFilePermissionsArgumentTypes) {
+    const permissions = await this.checkFilePermission(...args);
+
+    const isUserOwner = permissions.some(
+      (permission) => permission === EPermissionType.OWNER,
+    );
+
+    if (isUserOwner) {
+      return true;
+    }
+
+    throw new ForbiddenException(`You do not have permission to this`);
+  }
+
+  async checkUserCanReadFile(...args: ChekFilePermissionsArgumentTypes) {
+    const permissions = await this.checkFilePermission(...args);
+
+    if (permissions.length) {
+      return true;
+    }
+
+    throw new ForbiddenException(
+      `You do not have permission to view this file.`,
+    );
+  }
+
+  async checkUserCanEditFile(...args: ChekFilePermissionsArgumentTypes) {
+    const permissions = await this.checkFilePermission(...args);
+
+    const isUserCanEdit = permissions.some(
+      (permission) =>
+        permission === EPermissionType.OWNER ||
+        permission === EPermissionType.VIEW,
+    );
+
+    if (isUserCanEdit) {
+      return true;
+    }
+
+    throw new ForbiddenException(
+      `You do not have permission to edit this file.`,
+    );
+  }
+
+  private async checkFilePermission(userId: number, fileId: number) {
+    const file = await this.fileService.findOne(fileId, userId, ['folder']);
+
+    if (!file) {
+      throw new NotFoundException('File not found');
+    }
+
+    const userPermissions = [];
+    const isOwner = file.owner.id === userId;
+
+    if (isOwner) {
+      userPermissions.push(EPermissionType.OWNER);
+      return userPermissions;
+    }
+
+    if (file?.folder.id) {
+      const userFolderPermission = await this.checkFolderPermission(
+        userId,
+        file.folder.id,
+      );
+      if (userFolderPermission.length) {
+        userPermissions.push(...userFolderPermission);
+      }
+    }
+
+    const permissions = await this.findAll({
+      where: { user: { id: userId }, file },
+    });
+
+    if (!permissions.length) {
+      return userPermissions;
+    }
+
+    const isUserCanEdit = !!permissions.find(
+      ({ type }) => type === EPermissionType.EDIT,
+    );
+
+    if (isUserCanEdit) {
+      userPermissions.push(EPermissionType.EDIT);
+    }
+
+    const isUserCanView = !!permissions.find(
+      ({ type }) => type === EPermissionType.VIEW,
+    );
+
+    if (isUserCanView) {
+      userPermissions.push(EPermissionType.VIEW);
+    }
+
+    return userPermissions;
+  }
+
+  async checkUserFolderOwner(...args: ChekFolderPermissionsArgumentTypes) {
+    const permissions = await this.checkFolderPermission(...args);
+
+    const isUserOwner = permissions.some(
+      (permission) => permission === EPermissionType.OWNER,
+    );
+
+    if (isUserOwner) {
+      return true;
+    }
+    throw new ForbiddenException(`You do not have permission to this`);
+  }
+
+  async checkUserCanReadFolder(...args: ChekFolderPermissionsArgumentTypes) {
+    const permissions = await this.checkFolderPermission(...args);
+
+    if (permissions.length) {
+      return true;
+    }
+
+    throw new ForbiddenException(
+      `You do not have permission to read this folder.`,
+    );
+  }
+
+  async checkUserCanEditFolder(...args: ChekFolderPermissionsArgumentTypes) {
+    const permissions = await this.checkFolderPermission(...args);
+
+    const isUserCanEdit = permissions.some(
+      (permission) =>
+        permission === EPermissionType.OWNER ||
+        permission === EPermissionType.EDIT,
+    );
+
+    if (isUserCanEdit) {
+      return true;
+    }
+
+    throw new ForbiddenException(
+      `You do not have permission to edit this folder.`,
+    );
+  }
+
+  private async checkFolderPermission(userId: number, folderId: number) {
+    const folder = await this.folderService.findOne(folderId, userId);
+
+    if (!folder) {
+      throw new NotFoundException('Folder not found');
+    }
+
+    const isOwner = folder.owner.id === userId;
+    const userPermissions = [] as EPermissionType[];
+
+    if (isOwner) {
+      userPermissions.push(EPermissionType.OWNER);
+      return userPermissions;
+    }
+
+    const permissions = await this.findAll({
+      where: { user: { id: userId }, folder },
+    });
+
+    if (!permissions.length) {
+      return userPermissions;
+    }
+
+    const isUserCanEdit = !!permissions.find(
+      ({ type }) => type === EPermissionType.EDIT,
+    );
+
+    if (isUserCanEdit) {
+      userPermissions.push(EPermissionType.EDIT);
+    }
+
+    const isUserCanView = !!permissions.find(
+      ({ type }) => type === EPermissionType.VIEW,
+    );
+
+    if (isUserCanView) {
+      userPermissions.push(EPermissionType.VIEW);
+    }
+
+    return userPermissions;
   }
 }

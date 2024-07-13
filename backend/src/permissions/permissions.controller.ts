@@ -37,7 +37,7 @@ export class PermissionsController {
   @ApiOperation({ summary: 'Get all permissions' })
   @ApiUnauthorizedResponse({ description: 'Unauthorized' })
   async getAll(@GetCurrentUserId() userId: number) {
-    return await this.permissionService.findAll(userId);
+    return await this.permissionService.findAllByUserId(userId);
   }
 
   @Post()
@@ -52,7 +52,7 @@ export class PermissionsController {
     @GetCurrentUserId() userId: number,
   ) {
     await this.permissionService.create(createPermissionDto, userId);
-    return res.status(HttpStatus.CREATED);
+    return res.status(HttpStatus.CREATED).send();
   }
 
   @Get(':id')
@@ -65,8 +65,8 @@ export class PermissionsController {
     @Param('id') id: string,
     @GetCurrentUserId() userId: number,
   ) {
-    await this.permissionService.findOne(+id, userId);
-    return res.status(HttpStatus.OK).send('Permission Updated');
+    const permission = await this.permissionService.findOne(+id, userId);
+    return res.status(HttpStatus.OK).send(permission);
   }
 
   @Put(':id')
