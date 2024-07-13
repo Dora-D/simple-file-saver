@@ -10,12 +10,6 @@ export class User {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column({ nullable: false })
-  provider: Provider;
-
-  @Column({ nullable: false })
-  providerId: string;
-
   @Column()
   name: string;
 
