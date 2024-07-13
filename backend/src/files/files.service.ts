@@ -1,7 +1,6 @@
 import { UpdateFileDto } from '@app/files/dto/update-file.dto';
 import { File } from '@app/entities/file.entity';
 import {
-  ForbiddenException,
   Injectable,
   InternalServerErrorException,
   NotFoundException,
@@ -17,6 +16,7 @@ import { createReadStream } from 'fs';
 import { unlink } from 'fs/promises';
 import { copyFile } from 'fs/promises';
 import * as path from 'path';
+import { PermissionsService } from '@app/permissions/permissions.service';
 
 @Injectable()
 export class FilesService {
@@ -24,6 +24,7 @@ export class FilesService {
     @InjectRepository(File)
     private readonly fileRepository: Repository<File>,
     private readonly usersService: UsersService,
+    private readonly permissionsService: PermissionsService,
   ) {}
 
   async create(
@@ -61,44 +62,54 @@ export class FilesService {
     return this.fileRepository.save(newFile);
   }
 
-  async findOne(id: number, userId: number) {
+  async findOne(
+    id: number,
+    userId: number,
+    additionalRelations?: string[],
+    shouldCheckPerm = true,
+  ) {
+    const relations = additionalRelations
+      ? ['owner', ...additionalRelations]
+      : ['owner', 'permissions'];
+
     const file = await this.fileRepository.findOne({
       where: { id },
-      relations: ['owner'],
+      relations,
     });
 
-    if (!file) {
-      throw new NotFoundException('File not found');
-    }
-    if (file.owner.id !== userId) {
-      throw new ForbiddenException(
-        'You do not have permission to work with this file',
-      );
-    }
+    shouldCheckPerm &&
+      (await this.permissionsService.checkUserCanReadFile(userId, id));
 
-    return file;
+    return file as File;
   }
 
   async clone(fileId: number, userId: number) {
+    await this.permissionsService.checkUserCanEditFile(userId, fileId);
+
     const file = await this.findOne(fileId, userId);
 
     try {
-      const [newFileName] = await this.generateUniqueFileName(
-        file.name + file.exp,
-        file.folder?.id,
-      );
+      let fileName = file.name;
 
-      const newFilePath = `./uploads/${newFileName}-${Date.now()}${file.exp}`;
+      if (file.owner.id === userId) {
+        const [newFileName] = await this.generateUniqueFileName(
+          file.name + file.exp,
+          file.folder?.id,
+        );
+        fileName = newFileName;
+      }
+
+      const newFilePath = `./uploads/${fileName}-${Date.now()}${file.exp}`;
       await copyFile(file.path, newFilePath);
 
       const newFile = this.fileRepository.create({
         exp: file.exp,
-        name: newFileName,
+        name: fileName,
         type: file.type,
         size: file.size,
         path: newFilePath,
         isPublic: file.isPublic,
-        owner: file.owner,
+        owner: { id: userId },
         folder: file.folder,
       });
 
@@ -112,6 +123,8 @@ export class FilesService {
     if (!updateFileDto.isPublic && !updateFileDto.name) {
       return;
     }
+    await this.permissionsService.checkUserCanEditFile(userId, id);
+
     const file = await this.findOne(id, userId);
 
     let fileName = file.name;
@@ -130,16 +143,8 @@ export class FilesService {
   }
 
   async remove(id: number, userId: number) {
+    await this.permissionsService.checkUserFileOwner(userId, id);
     const file = await this.findOne(id, userId);
-
-    if (!file) {
-      throw new NotFoundException('File not found');
-    }
-    if (file.owner.id !== userId) {
-      throw new ForbiddenException(
-        'You do not have permission to delete this file',
-      );
-    }
 
     try {
       await unlink(file.path);
@@ -151,6 +156,8 @@ export class FilesService {
   }
 
   async download(res: Response, id: number | string, userId: number) {
+    await this.permissionsService.checkUserCanReadFile(userId, +id);
+
     const file = await this.findOne(+id, userId);
 
     const stream = createReadStream(path.join(process.cwd(), file.path));
@@ -166,8 +173,8 @@ export class FilesService {
     return new StreamableFile(stream);
   }
 
-  async getFileByFolderId(folderId: number) {
-    return this.fileRepository.find({
+  async getFilesByFolderId(folderId: number) {
+    return await this.fileRepository.find({
       where: { folder: { id: folderId } },
     });
   }
