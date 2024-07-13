@@ -12,6 +12,7 @@ import { Like, Repository } from 'typeorm';
 import { CreateFolderDto } from '@app/folders/dto/create-folder.dto';
 import { UpdateFolderDto } from '@app/folders/dto/update-folder.dto';
 import { FilesService } from '@app/files/files.service';
+import { PermissionsService } from '@app/permissions/permissions.service';
 
 @Injectable()
 export class FoldersService {
@@ -20,6 +21,7 @@ export class FoldersService {
     private folderRepository: Repository<Folder>,
     private readonly userService: UsersService,
     private readonly filesService: FilesService,
+    private readonly permissionsService: PermissionsService,
   ) {}
 
   async create(createFolderDto: CreateFolderDto, userId: number) {
@@ -37,7 +39,6 @@ export class FoldersService {
           id: createFolderDto.parentFolderId,
           owner: user,
         },
-        relations: ['childFolders'],
       });
 
       if (!parentFolder) {
@@ -57,27 +58,20 @@ export class FoldersService {
       parentFolder: parentFolder as Folder,
     });
 
-    if (parentFolder?.childFolders) {
-      parentFolder.childFolders.push(newFolder);
-    }
-
     return await this.folderRepository.save(newFolder);
   }
 
   async clone(folderId: number, userId: number) {
-    const folder = await this.getFolderByIdWithRelations(folderId);
+    this.permissionsService.checkUserCanEditFolder(userId, folderId);
 
-    if (!folder) {
-      throw new NotFoundException('Folder not found');
-    }
+    const folder = (await this.getFolderByIdWithRelations(folderId)) as Folder;
 
     try {
       const uniqueFolderName = await this.generateUniqueFolderName(
         folder.name,
-        folder.parentFolder?.id,
+        folder?.parentFolder?.id,
       );
 
-      // Клонування папки та її вмісту
       const newFolder = await this.cloneFolderRecursive(
         folder,
         uniqueFolderName,
@@ -141,7 +135,7 @@ export class FoldersService {
 
   private async deleteFolder(folder: Folder) {
     try {
-      const files = await this.filesService.getFileByFolderId(folder.id);
+      const files = await this.filesService.getFilesByFolderId(folder.id);
 
       for (const file of files) {
         await this.filesService.remove(file.id, folder.owner.id);
@@ -170,7 +164,7 @@ export class FoldersService {
   ) {
     const newFolder = this.folderRepository.create({
       name: newName,
-      owner: folder.owner,
+      owner: { id: userId },
       parentFolder: folder.parentFolder,
     });
 
