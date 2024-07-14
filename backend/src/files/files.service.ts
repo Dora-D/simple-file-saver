@@ -27,6 +27,15 @@ export class FilesService {
     private readonly permissionsService: PermissionsService,
   ) {}
 
+  async findAll(userId: number) {
+    const files = await this.fileRepository.find({
+      where: [{ owner: { id: userId } }],
+      relations: ['owner', 'folder', 'permissions'],
+    });
+
+    return files;
+  }
+
   async create(
     file: Express.Multer.File,
     createFileDto: CreateFileDto,
