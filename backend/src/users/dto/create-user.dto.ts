@@ -6,4 +6,7 @@ export class CreateUserDto {
 
   @IsString()
   email: string;
+
+  @IsString()
+  picture?: string;
 }

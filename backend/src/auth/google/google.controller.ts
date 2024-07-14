@@ -5,6 +5,7 @@ import {
   Body,
   Controller,
   Get,
+  HttpStatus,
   Post,
   Req,
   Res,
@@ -17,10 +18,9 @@ import { SESSION_COOKIE_KEY } from '@app/config/constants';
 
 import {
   ApiTags,
-  ApiOperation,
-  ApiOkResponse,
   ApiBadRequestResponse,
-  ApiOAuth2,
+  ApiExcludeEndpoint,
+  ApiCreatedResponse,
 } from '@nestjs/swagger';
 import { OAuth2Client } from 'google-auth-library';
 
@@ -39,14 +39,14 @@ export class GoogleController {
 
   @Get()
   @UseGuards(GoogleGuard)
-  @ApiOAuth2(['profile', 'email'], 'google-oauth2')
-  @ApiOperation({ summary: 'Initiate Google authentication' })
-  @ApiOkResponse({ description: 'Redirects to Google for authentication' })
+  @ApiExcludeEndpoint()
   async googleAuth() {
     // Guard redirects
   }
 
   @Post('/login')
+  @ApiCreatedResponse({ description: 'User successfully logged in.' })
+  @ApiBadRequestResponse({ description: 'Invalid or missing token.' })
   async login(@Body('token') token: string, @Res() res: Response) {
     const ticket = await client.verifyIdToken({
       idToken: token,
@@ -60,31 +60,29 @@ export class GoogleController {
 
     const email = userPayload.email as string;
     const name = (userPayload?.name || userPayload?.given_name) as string;
+    const picture = userPayload.picture;
 
     let user = await this.usersService.findOneByEmail(email);
 
     if (!user) {
-      user = await this.usersService.create({ name, email });
+      user = await this.usersService.create({ name, email, picture });
     }
 
     const { accessToken } = this.jwtAuthService.login(user);
 
     res.cookie(SESSION_COOKIE_KEY, accessToken, {
-      secure: process.env.NODE_ENV === 'production' || undefined,
+      secure: process.env.NODE_ENV === 'production',
       httpOnly: true,
-      signed: process.env.NODE_ENV === 'production' || undefined,
+      signed: process.env.NODE_ENV === 'production',
+      sameSite: process.env.NODE_ENV === 'production',
     });
 
-    return res.send(user);
+    return res.status(HttpStatus.CREATED).json(user);
   }
 
   @Get('redirect')
   @UseGuards(GoogleGuard)
-  @ApiOperation({ summary: 'Handle Google authentication callback' })
-  @ApiOkResponse({
-    description: 'Redirects to main page after successful authentication',
-  })
-  @ApiBadRequestResponse({ description: 'Bad request if authentication fails' })
+  @ApiExcludeEndpoint()
   async googleAuthRedirect(@Req() req: Request, @Res() res: Response) {
     const user = req.user;
 

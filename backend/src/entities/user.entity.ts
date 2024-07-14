@@ -16,6 +16,9 @@ export class User {
   @Column()
   email: string;
 
+  @Column()
+  picture: string;
+
   @OneToMany(() => File, (file) => file.owner)
   files: File[];
 
