@@ -7,7 +7,7 @@ import {
   StreamableFile,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Like, Repository } from 'typeorm';
+import { FindManyOptions, Like, Repository } from 'typeorm';
 import { CreateFileDto } from '@app/files/dto/create-file.dto';
 import { UsersService } from '@app/users/users.service';
 import { User } from '@app/entities/user.entity';
@@ -27,13 +27,8 @@ export class FilesService {
     private readonly permissionsService: PermissionsService,
   ) {}
 
-  async findAll(userId: number) {
-    const files = await this.fileRepository.find({
-      where: [{ owner: { id: userId } }],
-      relations: ['owner', 'folder', 'permissions'],
-    });
-
-    return files;
+  async findManyOptions(params: FindManyOptions<File> = {}) {
+    return await this.fileRepository.find(params);
   }
 
   async create(
@@ -71,23 +66,20 @@ export class FilesService {
     return this.fileRepository.save(newFile);
   }
 
-  async findOne(
-    id: number,
-    userId: number,
-    additionalRelations?: string[],
-    shouldCheckPerm = true,
-  ) {
-    const relations = additionalRelations
-      ? ['owner', ...additionalRelations]
-      : ['owner', 'permissions'];
+  async findFileById(id: number) {
+    return this.fileRepository.findOne({
+      where: { id },
+      relations: ['owner', 'folder'],
+    });
+  }
+
+  async findOne(id: number, userId: number) {
+    await this.permissionsService.checkUserCanReadFile(userId, id);
 
     const file = await this.fileRepository.findOne({
       where: { id },
-      relations,
+      relations: ['owner'],
     });
-
-    shouldCheckPerm &&
-      (await this.permissionsService.checkUserCanReadFile(userId, id));
 
     return file as File;
   }
@@ -95,7 +87,9 @@ export class FilesService {
   async clone(fileId: number, userId: number) {
     await this.permissionsService.checkUserCanEditFile(userId, fileId);
 
-    const file = await this.findOne(fileId, userId);
+    const file = (await this.fileRepository.findOne({
+      where: { id: fileId },
+    })) as File;
 
     try {
       let fileName = file.name;
@@ -134,7 +128,9 @@ export class FilesService {
     }
     await this.permissionsService.checkUserCanEditFile(userId, id);
 
-    const file = await this.findOne(id, userId);
+    const file = (await this.fileRepository.findOne({
+      where: { id },
+    })) as File;
 
     let fileName = file.name;
 
@@ -153,7 +149,9 @@ export class FilesService {
 
   async remove(id: number, userId: number) {
     await this.permissionsService.checkUserFileOwner(userId, id);
-    const file = await this.findOne(id, userId);
+    const file = (await this.fileRepository.findOne({
+      where: { id },
+    })) as File;
 
     try {
       await unlink(file.path);
@@ -164,10 +162,12 @@ export class FilesService {
     }
   }
 
-  async download(res: Response, id: number | string, userId: number) {
+  async download(res: Response, id: number, userId: number) {
     await this.permissionsService.checkUserCanReadFile(userId, +id);
 
-    const file = await this.findOne(+id, userId);
+    const file = (await this.fileRepository.findOne({
+      where: { id },
+    })) as File;
 
     const stream = createReadStream(path.join(process.cwd(), file.path));
 

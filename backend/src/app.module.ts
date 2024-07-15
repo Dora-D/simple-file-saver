@@ -8,6 +8,7 @@ import { UsersModule } from '@app/users/users.module';
 import { FoldersModule } from '@app/folders/folders.module';
 import { FilesModule } from '@app/files/files.module';
 import { PermissionsModule } from '@app/permissions/permissions.module';
+import { SearchModule } from './search/search.module';
 
 @Module({
   imports: [
@@ -17,6 +18,7 @@ import { PermissionsModule } from '@app/permissions/permissions.module';
     FoldersModule,
     FilesModule,
     PermissionsModule,
+    SearchModule,
   ],
   controllers: [AppController],
   providers: [AppService],

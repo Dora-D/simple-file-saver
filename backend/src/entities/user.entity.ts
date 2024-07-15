@@ -27,4 +27,7 @@ export class User {
 
   @OneToMany(() => Permission, (permission) => permission.user)
   permissions: Permission[];
+
+  @OneToMany(() => Permission, (permission) => permission.owner)
+  ownerPermissions: Permission[];
 }

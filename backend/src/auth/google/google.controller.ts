@@ -98,7 +98,7 @@ export class GoogleController {
       signed: process.env.NODE_ENV === 'production' || undefined,
     });
 
-    const redirectUrl = 'api/swagger';
+    const redirectUrl = 'http://localhost:3001/api/swagger';
 
     return res.redirect(redirectUrl);
   }

@@ -1,13 +1,12 @@
 import { Folder } from '@app/entities/folder.entity';
 import { UsersService } from '@app/users/users.service';
 import {
-  ForbiddenException,
   Injectable,
   InternalServerErrorException,
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Like, Repository } from 'typeorm';
+import { FindManyOptions, Like, Repository } from 'typeorm';
 
 import { CreateFolderDto } from '@app/folders/dto/create-folder.dto';
 import { UpdateFolderDto } from '@app/folders/dto/update-folder.dto';
@@ -24,6 +23,10 @@ export class FoldersService {
     private readonly permissionsService: PermissionsService,
   ) {}
 
+  async findManyOptions(params: FindManyOptions<Folder> = {}) {
+    return await this.folderRepository.find(params);
+  }
+
   async create(createFolderDto: CreateFolderDto, userId: number) {
     const user = await this.userService.findOne({ where: { id: userId } });
 
@@ -37,7 +40,6 @@ export class FoldersService {
       parentFolder = await this.folderRepository.findOne({
         where: {
           id: createFolderDto.parentFolderId,
-          owner: user,
         },
       });
 
@@ -84,26 +86,27 @@ export class FoldersService {
     }
   }
 
-  async findOne(id: number, userId: number) {
-    const folder = await this.folderRepository.findOne({
+  async findFileById(id: number) {
+    return this.folderRepository.findOne({
       where: { id },
       relations: ['owner'],
     });
+  }
 
-    if (!folder) {
-      throw new NotFoundException('Folder not found');
-    }
+  async findOne(id: number, userId: number) {
+    this.permissionsService.checkUserCanReadFolder(userId, id);
 
-    if (folder.owner.id !== userId) {
-      throw new ForbiddenException(
-        'You do not have permission to update this folder',
-      );
-    }
+    const folder = (await this.folderRepository.findOne({
+      where: { id },
+      relations: ['owner'],
+    })) as Folder;
 
     return folder;
   }
 
   async update(id: number, updateFolderDto: UpdateFolderDto, userId: number) {
+    this.permissionsService.checkUserCanEditFolder(userId, id);
+
     const folder = await this.findOne(id, userId);
 
     let name = updateFolderDto.name;
@@ -118,17 +121,9 @@ export class FoldersService {
   }
 
   async remove(id: number, userId: number) {
-    const folder = await this.getFolderByIdWithRelations(id);
+    this.permissionsService.checkUserFolderOwner(userId, id);
 
-    if (!folder) {
-      throw new NotFoundException('Folder not found');
-    }
-
-    if (folder.owner.id !== userId) {
-      throw new ForbiddenException(
-        'You do not have permission to delete this folder',
-      );
-    }
+    const folder = (await this.getFolderByIdWithRelations(id)) as Folder;
 
     await this.deleteFolder(folder);
   }

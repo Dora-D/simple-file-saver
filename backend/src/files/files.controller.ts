@@ -43,14 +43,6 @@ import { extname } from 'path';
 export class FilesController {
   constructor(private readonly fileService: FilesService) {}
 
-  @Get()
-  @ApiOperation({ summary: 'Get all files of the current user' })
-  @ApiOkResponse({ description: 'Files retrieved successfully' })
-  @ApiUnauthorizedResponse({ description: 'Unauthorized' })
-  async getAllFiles(@GetCurrentUserId() userId: number) {
-    return this.fileService.findAll(userId);
-  }
-
   @Post('upload')
   @ApiConsumes('multipart/form-data')
   @ApiOperation({ summary: 'Upload a new file' })
@@ -151,6 +143,6 @@ export class FilesController {
     @GetCurrentUserId() userId: number,
     @Res({ passthrough: true }) res: Response,
   ) {
-    return await this.fileService.download(res, id, userId);
+    return await this.fileService.download(res, +id, userId);
   }
 }

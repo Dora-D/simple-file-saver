@@ -64,8 +64,9 @@ export class PermissionsService {
 
     const permission = this.permissionRepository.create({
       user,
+      owner: { id: userId },
       file: fileId ? { id: fileId } : undefined,
-      folder: folderId ? { id: fileId } : undefined,
+      folder: folderId ? { id: folderId } : undefined,
       type: createPermissionDto.type,
     });
 
@@ -75,14 +76,14 @@ export class PermissionsService {
   async findOne(id: number, userId: number): Promise<Permission> {
     const permission = await this.permissionRepository.findOne({
       where: { id },
-      relations: ['user', 'file', 'folder'],
+      relations: ['user', 'file', 'folder', 'owner'],
     });
 
     if (!permission) {
       throw new NotFoundException('Permission not found');
     }
 
-    if (permission.user.id !== userId) {
+    if (permission.owner.id !== userId) {
       throw new ForbiddenException('You do not have permission to check this');
     }
 
@@ -91,7 +92,7 @@ export class PermissionsService {
 
   async findAllByUserId(userId: number) {
     const permissions = await this.findAll({
-      where: { user: { id: userId } },
+      where: { owner: { id: userId } },
       relations: ['file', 'folder'],
     });
 
@@ -169,13 +170,14 @@ export class PermissionsService {
   }
 
   private async checkFilePermission(userId: number, fileId: number) {
-    const file = await this.fileService.findOne(fileId, userId, ['folder']);
+    const file = await this.fileService.findFileById(fileId);
 
     if (!file) {
       throw new NotFoundException('File not found');
     }
 
     const userPermissions = [];
+    let permissions = file.permissions;
     const isOwner = file.owner.id === userId;
 
     if (isOwner) {
@@ -193,7 +195,7 @@ export class PermissionsService {
       }
     }
 
-    const permissions = await this.findAll({
+    permissions = await this.findAll({
       where: { user: { id: userId }, file },
     });
 
@@ -264,7 +266,7 @@ export class PermissionsService {
   }
 
   private async checkFolderPermission(userId: number, folderId: number) {
-    const folder = await this.folderService.findOne(folderId, userId);
+    const folder = await this.folderService.findFileById(folderId);
 
     if (!folder) {
       throw new NotFoundException('Folder not found');
