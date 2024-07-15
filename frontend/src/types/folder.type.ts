@@ -1,9 +1,11 @@
 import { User } from "./user.type";
+import { File } from "./file.type";
 
 export interface Folder {
   id: number;
   name: string;
   isPublic: boolean;
+  files: File[];
   owner: User;
   parentFolderId?: number;
 }
