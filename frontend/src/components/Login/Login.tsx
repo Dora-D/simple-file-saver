@@ -1,9 +1,11 @@
 import { Box, Container } from "@mui/material";
 import { GoogleLogin } from "@react-oauth/google";
 import { useAuth } from "../../hooks/useAuth";
+import { useAppSelector } from "../../hooks/reduxAppHooks";
 
 const Login = () => {
-  const { login, isAuthenticated, navigateToMainPage } = useAuth();
+  const { login, navigateToMainPage } = useAuth();
+  const isAuthenticated = useAppSelector(({ auth }) => auth.isAuthenticated);
 
   if (isAuthenticated) {
     navigateToMainPage();
