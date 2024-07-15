@@ -23,9 +23,9 @@ const Drive = () => {
     </Link>,
   ]);
 
-  const { isMine, query } = useAppSelector(({ search }) => search);
+  const { searchIn, query } = useAppSelector(({ search }) => search);
 
-  const { data } = useSearchQuery({ query, isMine });
+  const { data } = useSearchQuery({ query, searchIn });
 
   console.log(data);
 

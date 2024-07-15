@@ -3,6 +3,7 @@ import { axiosBaseQuery } from "../utilities/baseQuery";
 import { File as FileType, FileUpdate, FileUpload } from "../types/file.type";
 import { SearchResult } from "../types/search.type";
 import { Folder, FolderCreate, FolderUpdate } from "../types/folder.type";
+import { TSearchIn } from "../redux/store/slices/searchSlice";
 
 export const fileManagerApi = createApi({
   reducerPath: "fileManagerApi",
@@ -20,7 +21,7 @@ export const fileManagerApi = createApi({
         const formData = new FormData();
         formData.append("file", file);
         Object.entries(data).forEach(([key, value]) => {
-          if (key !== "name") {
+          if (key !== "name" && value) {
             formData.append(key, value.toString());
           }
         });
@@ -91,12 +92,12 @@ export const fileManagerApi = createApi({
     }),
     search: builder.query<
       SearchResult,
-      { query: string; folderId?: number; isMine?: boolean }
+      { query: string; folderId?: number; searchIn: TSearchIn }
     >({
-      query: ({ query, folderId, isMine }) => ({
+      query: ({ query, folderId, searchIn }) => ({
         url: "/search",
         method: "GET",
-        params: { query, folderId, isMine },
+        params: { query, folderId, searchIn },
       }),
       providesTags: ["Files", "Folders"],
     }),

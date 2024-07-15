@@ -1,13 +1,15 @@
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 
+export type TSearchIn = "own" | "available";
+
 interface SearchState {
   query: string;
-  isMine: boolean;
+  searchIn: TSearchIn;
 }
 
 const initialState: SearchState = {
   query: "",
-  isMine: true,
+  searchIn: "own",
 };
 
 const searchSlice = createSlice({
@@ -17,12 +19,12 @@ const searchSlice = createSlice({
     setSearchQuery(state, action: PayloadAction<string>) {
       state.query = action.payload;
     },
-    setIsMine(state, action: PayloadAction<boolean>) {
-      state.isMine = action.payload;
+    setSearchIn(state, action: PayloadAction<TSearchIn>) {
+      state.searchIn = action.payload;
     },
   },
 });
 
-export const { setSearchQuery, setIsMine } = searchSlice.actions;
+export const { setSearchQuery, setSearchIn } = searchSlice.actions;
 
 export default searchSlice.reducer;

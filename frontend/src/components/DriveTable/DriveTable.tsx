@@ -23,9 +23,9 @@ import { useSearchQuery } from "../../services/fileManagerApi";
 import { formatFileSize } from "../../utilities/formatFileSize";
 
 const DriveTable: React.FC = () => {
-  const { isMine, query } = useAppSelector(({ search }) => search);
+  const { searchIn, query } = useAppSelector(({ search }) => search);
 
-  const { data, isLoading } = useSearchQuery({ query, isMine });
+  const { data, isLoading } = useSearchQuery({ query, searchIn });
 
   if (isLoading) {
     <Backdrop
