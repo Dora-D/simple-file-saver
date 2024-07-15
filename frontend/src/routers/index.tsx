@@ -16,7 +16,15 @@ const router = createBrowserRouter([
         element: <Drive />,
       },
       {
+        path: "/drive/folder/:folderId",
+        element: <Drive />,
+      },
+      {
         path: "/drive/available-to-me",
+        element: <Drive />,
+      },
+      {
+        path: "/drive/available-to-me/folder/:folderId",
         element: <Drive />,
       },
     ],

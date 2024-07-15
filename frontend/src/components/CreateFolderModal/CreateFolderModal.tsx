@@ -9,15 +9,21 @@ import {
   Checkbox,
 } from "@mui/material";
 import { useCreateFolderMutation } from "../../services/fileManagerApi";
+import { useParams } from "react-router-dom";
 
 const CreateFolderModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
   const [folderName, setFolderName] = useState("");
   const [isPublic, setIsPublic] = useState(false);
   const [createFolder, { isLoading }] = useCreateFolderMutation();
+  const { folderId } = useParams();
 
   const handleCreateFolder = async () => {
     try {
-      await createFolder({ name: folderName, isPublic }).unwrap();
+      await createFolder({
+        name: folderName,
+        isPublic,
+        parentFolderId: folderId ? +folderId : undefined,
+      }).unwrap();
       onClose();
     } catch (error) {
       console.error("Failed to create folder:", error);
