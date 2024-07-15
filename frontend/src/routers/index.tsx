@@ -1,29 +1,22 @@
 import { createBrowserRouter } from "react-router-dom";
 import Login from "../components/Login/Login";
 import ProtectedRoute from "../components/ProtectedRoute/ProtectedRoute";
-import { useAuth } from "../hooks/useAuth";
-
-const Drive = () => {
-  const { logout } = useAuth();
-  return (
-    <div>
-      At Drive
-      <button onClick={logout}>logout</button>
-    </div>
-  );
-};
+import Drive from "../components/Drive/Drive";
 
 const router = createBrowserRouter([
   {
     path: "/",
     element: <Login />,
-    index: true,
   },
   {
     element: <ProtectedRoute />,
     children: [
       {
         path: "/drive",
+        element: <Drive />,
+      },
+      {
+        path: "/drive/available-to-me",
         element: <Drive />,
       },
     ],
