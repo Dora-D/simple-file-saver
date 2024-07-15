@@ -1,11 +1,11 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect } from "react";
 
 import { CredentialResponse } from "@react-oauth/google";
 
 import { useNavigate } from "react-router-dom";
 
 import { setCurrentUser } from "../redux/store/slices/userSlice";
-import { useAppDispatch } from "./reduxAppHooks";
+import { useAppDispatch, useAppSelector } from "./reduxAppHooks";
 
 import { deleteUserFromLocalStorage } from "../utilities/deleteUserFromLocalStorage";
 import { setUserToLocalStorage } from "../utilities/setUserToLocalStorage";
@@ -13,39 +13,41 @@ import { getUserFromLocalStorage } from "../utilities/getUserFromLocalStorage";
 import axiosInstance from "../utilities/axiosInstance";
 
 import { User } from "../types/user.type";
+import { setAuthenticated } from "../redux/store/slices/authSlice";
 
 export const useAuth = () => {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(
-    !!getUserFromLocalStorage()
-  );
+  const isAuthenticated = useAppSelector(({ auth }) => auth.isAuthenticated);
+
+  const setIsAuthenticated = (value: boolean) => {
+    dispatch(setAuthenticated(value));
+  };
 
   const navigateToMainPage = useCallback(() => {
-    navigate("/drive", { replace: true });
+    navigate("/drive/my", { replace: true });
   }, [navigate]);
 
   const logout = () => {
+    dispatch(setCurrentUser(null));
+
     setIsAuthenticated(false);
     deleteUserFromLocalStorage();
     navigate("/", { replace: true });
   };
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (isAuthenticated) {
       const user = getUserFromLocalStorage();
       dispatch(setCurrentUser(user));
       navigateToMainPage();
-    } else {
-      dispatch(setCurrentUser(null));
     }
   }, [isAuthenticated, dispatch, navigateToMainPage]);
 
   const login = async (credentialResponse: CredentialResponse) => {
     try {
-      const url = `${process.env.REACT_APP_BACKEND_URL}/auth/google/login`;
       const { data } = await axiosInstance.post<User>(
-        url,
+        "/auth/google/login",
         {
           token: credentialResponse.credential,
         },
@@ -63,7 +65,6 @@ export const useAuth = () => {
   };
 
   return {
-    isAuthenticated,
     logout,
     login,
     navigateToMainPage,
