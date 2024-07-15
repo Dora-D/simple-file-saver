@@ -53,7 +53,7 @@ export class FilesService {
     );
 
     const newFile = this.fileRepository.create({
-      isPublic: createFileDto.isPublic,
+      isPublic: Boolean(createFileDto.isPublic),
       folder: folderId ? { id: folderId } : undefined,
       owner: user,
       name: uniqueFileName,

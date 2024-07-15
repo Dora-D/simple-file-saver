@@ -33,17 +33,18 @@ export class SearchController {
     required: false,
   })
   @ApiQuery({
-    name: 'isMine',
+    name: 'searchIn',
     description: "Search only in user's files and folders",
-    type: Boolean,
+    type: String,
+    enum: ['own', 'available'],
     required: false,
   })
   async search(
     @Query('query') query: string,
     @GetCurrentUserId() userId: number,
+    @Query('searchIn') searchIn: 'own' | 'available',
     @Query('folderId') folderId?: number,
-    @Query('isMine') isMine?: boolean,
   ) {
-    return this.searchService.search(query, userId, folderId, isMine);
+    return await this.searchService.search(query, userId, searchIn, folderId);
   }
 }

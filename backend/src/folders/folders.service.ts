@@ -6,7 +6,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { FindManyOptions, Like, Repository } from 'typeorm';
+import { FindManyOptions, FindOneOptions, Like, Repository } from 'typeorm';
 
 import { CreateFolderDto } from '@app/folders/dto/create-folder.dto';
 import { UpdateFolderDto } from '@app/folders/dto/update-folder.dto';
@@ -25,6 +25,33 @@ export class FoldersService {
 
   async findManyOptions(params: FindManyOptions<Folder> = {}) {
     return await this.folderRepository.find(params);
+  }
+
+  async findOneOptions(params: FindOneOptions<Folder> = {}) {
+    return await this.folderRepository.findOne(params);
+  }
+
+  async getBreadcrumbs(
+    folderId: number,
+  ): Promise<{ folderName: string; folderId: number }[]> {
+    const breadcrumbs = [];
+
+    let currentFolder: Folder | null = await this.folderRepository.findOne({
+      where: { id: folderId },
+      relations: ['parentFolder'],
+    });
+
+    while (currentFolder) {
+      if (currentFolder) {
+        breadcrumbs.unshift({
+          folderName: currentFolder.name,
+          folderId: currentFolder.id,
+        });
+        currentFolder = currentFolder.parentFolder ?? null;
+      }
+    }
+
+    return breadcrumbs;
   }
 
   async create(createFolderDto: CreateFolderDto, userId: number) {

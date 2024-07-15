@@ -1,7 +1,7 @@
 import { FilesService } from '@app/files/files.service';
 import { FoldersService } from '@app/folders/folders.service';
 import { Injectable } from '@nestjs/common';
-import { Like } from 'typeorm';
+import { ILike } from 'typeorm';
 
 @Injectable()
 export class SearchService {
@@ -12,11 +12,12 @@ export class SearchService {
   async search(
     query: string,
     userId: number,
+    searchIn: 'own' | 'available',
     folderId?: number,
-    isMine?: boolean,
   ) {
     const isQueryEmpty = !query || query.trim().length === 0;
-    if (isMine) {
+
+    if (searchIn === 'own') {
       return this.getMineData(isQueryEmpty, query, userId, folderId);
     } else {
       return this.getData(isQueryEmpty, query, userId, folderId);
@@ -30,34 +31,68 @@ export class SearchService {
     folderId?: number,
   ) {
     if (folderId) {
-      return await this.folderService.findManyOptions({
-        where: {
-          parentFolder: { id: folderId },
-          childFolders: isQueryEmpty ? undefined : { name: Like(`%${query}%`) },
-          files: isQueryEmpty ? undefined : { name: Like(`%${query}%`) },
+      const folder = await this.folderService.findOneOptions({
+        where: [
+          {
+            id: folderId,
+            childFolders: isQueryEmpty
+              ? undefined
+              : { name: ILike(`%${query}%`) },
+            files: isQueryEmpty ? undefined : { name: ILike(`%${query}%`) },
+            permissions: { user: { id: userId } },
+          },
+          {
+            id: folderId,
+            childFolders: isQueryEmpty
+              ? undefined
+              : { name: ILike(`%${query}%`) },
+            files: isQueryEmpty ? undefined : { name: ILike(`%${query}%`) },
+            isPublic: true,
+          },
+        ],
+        relations: [
+          'owner',
+          'permissions',
+          'files',
+          'childFolders',
+          'childFolders.owner',
+          'files.owner',
+        ],
+      });
+      const breadcrumbs = await this.folderService.getBreadcrumbs(folderId);
+
+      return { folder, breadcrumbs };
+    }
+
+    const folders = await this.folderService.findManyOptions({
+      where: [
+        {
+          name: isQueryEmpty ? undefined : ILike(`%${query}%`),
           permissions: { user: { id: userId } },
         },
-        relations: ['owner', 'permissions', 'files', 'childFolders'],
-      });
-    }
-    const folders = await this.folderService.findManyOptions({
-      where: {
-        name: isQueryEmpty ? undefined : Like(`%${query}%`),
-        permissions: { user: { id: userId } },
-      },
+        {
+          name: isQueryEmpty ? undefined : ILike(`%${query}%`),
+          isPublic: true,
+        },
+      ],
       relations: ['owner', 'permissions'],
     });
+
     const files = await this.fileService.findManyOptions({
-      where: {
-        name: isQueryEmpty ? undefined : Like(`%${query}%`),
-        permissions: { user: { id: userId } },
-      },
+      where: [
+        {
+          name: isQueryEmpty ? undefined : ILike(`%${query}%`),
+          permissions: { user: { id: userId } },
+        },
+        {
+          name: isQueryEmpty ? undefined : ILike(`%${query}%`),
+          isPublic: true,
+        },
+      ],
       relations: ['owner', 'permissions'],
     });
-    return {
-      folders,
-      files,
-    };
+
+    return { folder: { childFolders: folders, files }, breadcrumbs: [] };
   }
 
   private async getMineData(
@@ -67,30 +102,44 @@ export class SearchService {
     folderId?: number,
   ) {
     if (folderId) {
-      return await this.folderService.findManyOptions({
+      const folder = await this.folderService.findOneOptions({
         where: {
-          parentFolder: { id: folderId },
-          childFolders: isQueryEmpty ? undefined : { name: Like(`%${query}%`) },
-          files: isQueryEmpty ? undefined : { name: Like(`%${query}%`) },
+          id: folderId,
+          childFolders: isQueryEmpty
+            ? undefined
+            : { name: ILike(`%${query}%`) },
+          files: isQueryEmpty ? undefined : { name: ILike(`%${query}%`) },
           owner: { id: userId },
         },
-        relations: ['owner', 'permissions', 'files', 'childFolders'],
+        relations: [
+          'owner',
+          'permissions',
+          'files',
+          'childFolders',
+          'parentFolder',
+          'childFolders.owner',
+          'files.owner',
+        ],
       });
+
+      const breadcrumbs = await this.folderService.getBreadcrumbs(folderId);
+
+      return { folder, breadcrumbs };
     }
     const folders = await this.folderService.findManyOptions({
       where: {
         owner: { id: userId },
-        name: isQueryEmpty ? undefined : Like(`%${query}%`),
+        name: isQueryEmpty ? undefined : ILike(`%${query}%`),
       },
       relations: ['owner', 'permissions'],
     });
     const files = await this.fileService.findManyOptions({
       where: {
         owner: { id: userId },
-        name: isQueryEmpty ? undefined : Like(`%${query}%`),
+        name: isQueryEmpty ? undefined : ILike(`%${query}%`),
       },
       relations: ['owner', 'permissions'],
     });
-    return { folders, files };
+    return { folder: { childFolders: folders, files }, breadcrumbs: [] };
   }
 }
