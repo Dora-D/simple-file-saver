@@ -2,7 +2,7 @@ import axios from "axios";
 import { deleteUserFromLocalStorage } from "./deleteUserFromLocalStorage";
 
 const axiosInstance = axios.create({
-  baseURL: "/api",
+  baseURL: process.env.REACT_APP_BACKEND_URL,
   withCredentials: true,
 });
 
