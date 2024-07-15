@@ -1,8 +1,8 @@
 import { Navigate, Outlet } from "react-router-dom";
-import { useAuth } from "../../hooks/useAuth";
+import { useAppSelector } from "../../hooks/reduxAppHooks";
 
 const ProtectedRoute = () => {
-  const { isAuthenticated } = useAuth();
+  const isAuthenticated = useAppSelector(({ auth }) => auth.isAuthenticated);
 
   if (!isAuthenticated) {
     return <Navigate to="/" replace />;
