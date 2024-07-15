@@ -1,22 +1,23 @@
-// File.ts
+import { User } from "./user.type";
+
 export interface File {
   id: number;
   name: string;
   type: string;
   size: number;
-  path: string;
+  path?: string;
   isPublic: boolean;
-  ownerId: number;
+  owner: User;
   folderId?: number;
+  exp: string;
 }
 
-export interface FileUploadRequest {
-  name: string;
+export interface FileUpload {
   isPublic: boolean;
-  folderId?: number;
+  folderId?: number | string;
 }
 
-export interface FileUpdateRequest {
+export interface FileUpdate {
   name?: string;
   isPublic?: boolean;
   folderId?: number;
