@@ -25,7 +25,7 @@ export const useAuth = () => {
   };
 
   const navigateToMainPage = useCallback(() => {
-    navigate("/drive/my", { replace: true });
+    navigate("/drive", { replace: true });
   }, [navigate]);
 
   const logout = () => {
