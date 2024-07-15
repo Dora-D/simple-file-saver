@@ -21,11 +21,28 @@ import MoreVertIcon from "@mui/icons-material/MoreVert";
 import { useAppSelector } from "../../hooks/reduxAppHooks";
 import { useSearchQuery } from "../../services/fileManagerApi";
 import { formatFileSize } from "../../utilities/formatFileSize";
+import { useNavigate, useParams } from "react-router-dom";
 
 const DriveTable: React.FC = () => {
+  let { folderId } = useParams();
+  const navigate = useNavigate();
+
   const { searchIn, query } = useAppSelector(({ search }) => search);
 
-  const { data, isLoading } = useSearchQuery({ query, searchIn });
+  const { data, isLoading } = useSearchQuery({
+    query,
+    searchIn,
+    folderId: folderId ? +folderId : undefined,
+  });
+
+  const handleFolderClick = (folderId: number) => {
+    const to =
+      searchIn === "own"
+        ? `/drive/folder/${folderId}`
+        : `/drive/available-to-me/folder/${folderId}`;
+
+    navigate(to);
+  };
 
   if (isLoading) {
     <Backdrop
@@ -36,12 +53,14 @@ const DriveTable: React.FC = () => {
     </Backdrop>;
   }
 
-  if (!data) {
+  if (!data?.folder) {
     return null;
   }
 
+  const { folder } = data;
+
   return (
-    <TableContainer component={Paper}>
+    <TableContainer sx={{ boxShadow: "none" }} component={Paper}>
       <Table>
         <TableHead>
           <TableRow>
@@ -54,8 +73,13 @@ const DriveTable: React.FC = () => {
           </TableRow>
         </TableHead>
         <TableBody>
-          {data.folders.map(({ name, id, owner, isPublic }) => (
-            <TableRow key={id + name}>
+          {folder.childFolders.map(({ name, id, owner, isPublic }) => (
+            <TableRow
+              key={id + name}
+              hover
+              sx={{ cursor: "pointer" }}
+              onClick={() => handleFolderClick(id)}
+            >
               <TableCell>
                 <Stack direction="row" spacing={1} alignItems="center">
                   <FolderIcon />
@@ -83,8 +107,8 @@ const DriveTable: React.FC = () => {
               </TableCell>
             </TableRow>
           ))}
-          {data.files.map(({ name, id, owner, size, isPublic, exp }) => (
-            <TableRow key={id + name}>
+          {folder.files.map(({ name, id, owner, size, isPublic, exp }) => (
+            <TableRow key={id + name} hover sx={{ cursor: "pointer" }}>
               <TableCell>
                 <Stack direction="row" spacing={1} alignItems="center">
                   <InsertDriveFileIcon />
