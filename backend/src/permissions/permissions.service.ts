@@ -208,14 +208,16 @@ export class PermissionsService {
     );
 
     if (isUserCanEdit) {
+      userPermissions.push(EPermissionType.VIEW);
       userPermissions.push(EPermissionType.EDIT);
+      return userPermissions;
     }
 
     const isUserCanView = !!permissions.find(
       ({ type }) => type === EPermissionType.VIEW,
     );
 
-    if (isUserCanView) {
+    if (isUserCanView || file.isPublic) {
       userPermissions.push(EPermissionType.VIEW);
     }
 
@@ -293,14 +295,16 @@ export class PermissionsService {
     );
 
     if (isUserCanEdit) {
+      userPermissions.push(EPermissionType.VIEW);
       userPermissions.push(EPermissionType.EDIT);
+      return userPermissions;
     }
 
     const isUserCanView = !!permissions.find(
       ({ type }) => type === EPermissionType.VIEW,
     );
 
-    if (isUserCanView) {
+    if (isUserCanView || folder.isPublic) {
       userPermissions.push(EPermissionType.VIEW);
     }
 
