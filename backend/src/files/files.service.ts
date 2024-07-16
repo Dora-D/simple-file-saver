@@ -16,7 +16,6 @@ import { createReadStream } from 'fs';
 import { unlink } from 'fs/promises';
 import { copyFile } from 'fs/promises';
 import * as path from 'path';
-import { PermissionsService } from '@app/permissions/permissions.service';
 
 @Injectable()
 export class FilesService {
@@ -24,7 +23,6 @@ export class FilesService {
     @InjectRepository(File)
     private readonly fileRepository: Repository<File>,
     private readonly usersService: UsersService,
-    private readonly permissionsService: PermissionsService,
   ) {}
 
   async findManyOptions(params: FindManyOptions<File> = {}) {
@@ -73,9 +71,7 @@ export class FilesService {
     });
   }
 
-  async findOne(id: number, userId: number) {
-    await this.permissionsService.checkUserCanReadFile(userId, id);
-
+  async findOne(id: number) {
     const file = await this.fileRepository.findOne({
       where: { id },
       relations: ['owner'],
@@ -85,10 +81,9 @@ export class FilesService {
   }
 
   async clone(fileId: number, userId: number) {
-    await this.permissionsService.checkUserCanEditFile(userId, fileId);
-
     const file = (await this.fileRepository.findOne({
       where: { id: fileId },
+      relations: ['owner', 'folder'],
     })) as File;
 
     try {
@@ -118,15 +113,16 @@ export class FilesService {
 
       return await this.fileRepository.save(newFile);
     } catch (error) {
+      console.log(error);
+
       throw new InternalServerErrorException('Failed to clone file');
     }
   }
 
-  async update(id: number, updateFileDto: UpdateFileDto, userId: number) {
+  async update(id: number, updateFileDto: UpdateFileDto) {
     if (!updateFileDto.isPublic && !updateFileDto.name) {
       return;
     }
-    await this.permissionsService.checkUserCanEditFile(userId, id);
 
     const file = (await this.fileRepository.findOne({
       where: { id },
@@ -147,8 +143,7 @@ export class FilesService {
     return await this.fileRepository.save(file);
   }
 
-  async remove(id: number, userId: number) {
-    await this.permissionsService.checkUserFileOwner(userId, id);
+  async remove(id: number) {
     const file = (await this.fileRepository.findOne({
       where: { id },
     })) as File;
@@ -162,9 +157,7 @@ export class FilesService {
     }
   }
 
-  async download(res: Response, id: number, userId: number) {
-    await this.permissionsService.checkUserCanReadFile(userId, +id);
-
+  async download(res: Response, id: number) {
     const file = (await this.fileRepository.findOne({
       where: { id },
     })) as File;

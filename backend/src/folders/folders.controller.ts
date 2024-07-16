@@ -26,12 +26,16 @@ import { Folder } from '@app/entities/folder.entity';
 import { GetCurrentUserId } from '@app/common/decprators/get-current-user-id.decorator';
 import { UpdateFolderDto } from '@app/folders/dto/update-folder.dto';
 import { Response } from 'express';
+import { PermissionsService } from '@app/permissions/permissions.service';
 
 @UseGuards(JwtAuthGuard)
 @Controller('folders')
 @ApiTags('Folders')
 export class FoldersController {
-  constructor(private readonly folderService: FoldersService) {}
+  constructor(
+    private readonly folderService: FoldersService,
+    private readonly permissionsService: PermissionsService,
+  ) {}
 
   @Post()
   @ApiOperation({ summary: 'Create a new folder' })
@@ -45,6 +49,11 @@ export class FoldersController {
     @Body() createFolderDto: CreateFolderDto,
     @GetCurrentUserId() userId: number,
   ) {
+    if (createFolderDto.parentFolderId)
+      this.permissionsService.checkUserCanEditFolder(
+        userId,
+        createFolderDto.parentFolderId,
+      );
     const folder = await this.folderService.create(createFolderDto, userId);
     return folder;
   }
@@ -61,6 +70,7 @@ export class FoldersController {
     @Param('id') id: string,
     @GetCurrentUserId() userId: number,
   ) {
+    this.permissionsService.checkUserCanEditFolder(userId, +id);
     return this.folderService.clone(+id, userId);
   }
 
@@ -70,7 +80,8 @@ export class FoldersController {
   @ApiNotFoundResponse({ description: 'Folder not found' })
   @ApiUnauthorizedResponse({ description: 'Unauthorized' })
   findOne(@Param('id') id: string, @GetCurrentUserId() userId: number) {
-    return this.folderService.findOne(+id, userId);
+    this.permissionsService.checkUserCanReadFolder(userId, +id);
+    return this.folderService.findOne(+id);
   }
 
   @Put(':id')
@@ -84,11 +95,8 @@ export class FoldersController {
     @Body() updateFolderDto: UpdateFolderDto,
     @GetCurrentUserId() userId: number,
   ) {
-    const folder = await this.folderService.update(
-      +id,
-      updateFolderDto,
-      userId,
-    );
+    this.permissionsService.checkUserCanEditFolder(userId, +id);
+    const folder = await this.folderService.update(+id, updateFolderDto);
     return folder;
   }
 
@@ -102,7 +110,8 @@ export class FoldersController {
     @GetCurrentUserId() userId: number,
     @Res() res: Response,
   ) {
-    await this.folderService.remove(+id, userId);
+    this.permissionsService.checkUserFolderOwner(userId, +id);
+    await this.folderService.remove(+id);
     return res.status(HttpStatus.OK).send('Folder Deleted');
   }
 }

@@ -11,7 +11,6 @@ import { FindManyOptions, FindOneOptions, Like, Repository } from 'typeorm';
 import { CreateFolderDto } from '@app/folders/dto/create-folder.dto';
 import { UpdateFolderDto } from '@app/folders/dto/update-folder.dto';
 import { FilesService } from '@app/files/files.service';
-import { PermissionsService } from '@app/permissions/permissions.service';
 
 @Injectable()
 export class FoldersService {
@@ -20,7 +19,6 @@ export class FoldersService {
     private folderRepository: Repository<Folder>,
     private readonly userService: UsersService,
     private readonly filesService: FilesService,
-    private readonly permissionsService: PermissionsService,
   ) {}
 
   async findManyOptions(params: FindManyOptions<Folder> = {}) {
@@ -91,8 +89,6 @@ export class FoldersService {
   }
 
   async clone(folderId: number, userId: number) {
-    this.permissionsService.checkUserCanEditFolder(userId, folderId);
-
     const folder = (await this.getFolderByIdWithRelations(folderId)) as Folder;
 
     try {
@@ -120,9 +116,7 @@ export class FoldersService {
     });
   }
 
-  async findOne(id: number, userId: number) {
-    this.permissionsService.checkUserCanReadFolder(userId, id);
-
+  async findOne(id: number) {
     const folder = (await this.folderRepository.findOne({
       where: { id },
       relations: ['owner'],
@@ -131,10 +125,8 @@ export class FoldersService {
     return folder;
   }
 
-  async update(id: number, updateFolderDto: UpdateFolderDto, userId: number) {
-    this.permissionsService.checkUserCanEditFolder(userId, id);
-
-    const folder = await this.findOne(id, userId);
+  async update(id: number, updateFolderDto: UpdateFolderDto) {
+    const folder = await this.findOne(id);
 
     let name = updateFolderDto.name;
 
@@ -147,9 +139,7 @@ export class FoldersService {
     return await this.folderRepository.save(folder);
   }
 
-  async remove(id: number, userId: number) {
-    this.permissionsService.checkUserFolderOwner(userId, id);
-
+  async remove(id: number) {
     const folder = (await this.getFolderByIdWithRelations(id)) as Folder;
 
     await this.deleteFolder(folder);
@@ -160,7 +150,7 @@ export class FoldersService {
       const files = await this.filesService.getFilesByFolderId(folder.id);
 
       for (const file of files) {
-        await this.filesService.remove(file.id, folder.owner.id);
+        await this.filesService.remove(file.id);
       }
 
       const childFolders = await this.folderRepository.find({
