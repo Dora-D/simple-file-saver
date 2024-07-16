@@ -35,6 +35,20 @@ export class PermissionsService {
     private readonly folderService: FoldersService,
   ) {}
 
+  async findByFileId(fileId: number): Promise<Permission[]> {
+    return this.permissionRepository.find({
+      where: { file: { id: fileId } },
+      relations: ['user'],
+    });
+  }
+
+  async findByFolderId(folderId: number): Promise<Permission[]> {
+    return this.permissionRepository.find({
+      where: { folder: { id: folderId } },
+      relations: ['user'],
+    });
+  }
+
   async create(
     createPermissionDto: CreatePermissionDto,
     userId: number,

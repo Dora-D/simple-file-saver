@@ -40,6 +40,24 @@ export class PermissionsController {
     return await this.permissionService.findAllByUserId(userId);
   }
 
+  @Get('file/:fileId')
+  @ApiOperation({ summary: 'Get permissions by file ID' })
+  @ApiOkResponse({ description: 'Permissions retrieved successfully' })
+  @ApiNotFoundResponse({ description: 'File not found' })
+  @ApiUnauthorizedResponse({ description: 'Unauthorized' })
+  async findByFileId(@Param('fileId') fileId: number) {
+    return this.permissionService.findByFileId(fileId);
+  }
+
+  @Get('folder/:folderId')
+  @ApiOperation({ summary: 'Get permissions by folder ID' })
+  @ApiOkResponse({ description: 'Permissions retrieved successfully' })
+  @ApiNotFoundResponse({ description: 'Folder not found' })
+  @ApiUnauthorizedResponse({ description: 'Unauthorized' })
+  async findByFolderId(@Param('folderId') folderId: number) {
+    return this.permissionService.findByFolderId(folderId);
+  }
+
   @Post()
   @ApiOperation({ summary: 'Create a new permission' })
   @ApiCreatedResponse({ description: 'Permission created successfully' })
