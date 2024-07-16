@@ -1,3 +1,5 @@
+import { User } from "./user.type";
+
 export enum EPermissionType {
   VIEW = "view",
   EDIT = "edit",
@@ -12,6 +14,7 @@ export interface Permission {
   fileId?: number;
   folderId?: number;
   type: PermissionType;
+  user: User;
 }
 
 export interface CreatePermissionRequest {

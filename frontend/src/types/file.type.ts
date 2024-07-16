@@ -1,3 +1,4 @@
+import { Permission } from "./permission.type";
 import { User } from "./user.type";
 
 export interface File {
@@ -10,6 +11,7 @@ export interface File {
   owner: User;
   folderId?: number;
   exp: string;
+  permissions?: Permission[];
 }
 
 export interface FileUpload {

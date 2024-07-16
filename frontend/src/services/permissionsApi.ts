@@ -11,7 +11,7 @@ const baseUrl = process.env.REACT_APP_BACKEND_URL as string;
 
 export const permissionsApi = createApi({
   reducerPath: "permissionsApi",
-  baseQuery: axiosBaseQuery({ baseUrl: `${baseUrl}/api/permissions` }),
+  baseQuery: axiosBaseQuery({ baseUrl: `${baseUrl}/permissions` }),
   tagTypes: ["Permissions"],
   endpoints: (builder) => ({
     getPermissions: builder.query<Permission[], void>({
@@ -20,7 +20,16 @@ export const permissionsApi = createApi({
     }),
     getPermissionById: builder.query<Permission, number>({
       query: (id) => ({ url: `/${id}` }),
-      providesTags: (result, error, id) => [{ type: "Permissions", id }],
+      providesTags: ["Permissions"],
+    }),
+    getPermissionsByFileId: builder.query<Permission[], number>({
+      query: (fileId) => ({ url: `/file/${fileId}`, method: "GET" }),
+      providesTags: ["Permissions"],
+    }),
+
+    getPermissionsByFolderId: builder.query<Permission[], number>({
+      query: (folderId) => ({ url: `/folder/${folderId}`, method: "GET" }),
+      providesTags: (result, error, folderId) => ["Permissions"],
     }),
     createPermission: builder.mutation<Permission, CreatePermissionRequest>({
       query: (data) => ({
@@ -39,7 +48,7 @@ export const permissionsApi = createApi({
         method: "PUT",
         body: data,
       }),
-      invalidatesTags: (result, error, { id }) => [{ type: "Permissions", id }],
+      invalidatesTags: ["Permissions"],
     }),
     deletePermission: builder.mutation<void, number>({
       query: (id) => ({
@@ -57,4 +66,6 @@ export const {
   useCreatePermissionMutation,
   useUpdatePermissionMutation,
   useDeletePermissionMutation,
+  useGetPermissionsByFileIdQuery,
+  useGetPermissionsByFolderIdQuery,
 } = permissionsApi;

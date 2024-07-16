@@ -3,7 +3,7 @@ import { ApiProperty } from '@nestjs/swagger';
 import { PermissionType } from '@app/entities/permission.entity';
 
 export class CreatePermissionDto {
-  @ApiProperty({ description: 'Email of the user to grant permission to' })
+  @ApiProperty({ description: 'Email of the user to grant permission' })
   @IsEmail()
   email: string;
 
