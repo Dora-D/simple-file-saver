@@ -7,11 +7,15 @@ import {
   ListItem,
   ListItemText,
   Divider,
+  Tooltip,
+  IconButton,
 } from "@mui/material";
 import {
+  useDeletePermissionMutation,
   useGetPermissionsByFileIdQuery,
   useGetPermissionsByFolderIdQuery,
 } from "../../services/permissionsApi";
+import DeleteIcon from "@mui/icons-material/Delete";
 
 interface ViewPermissionsModalProps {
   open: boolean;
@@ -35,6 +39,16 @@ const ViewPermissionsModal: React.FC<ViewPermissionsModalProps> = ({
     { skip: !folderId }
   );
 
+  const [deletePermission] = useDeletePermissionMutation();
+
+  const handleDeletePermission = async (permissionId: number) => {
+    try {
+      await deletePermission(permissionId).unwrap();
+    } catch (error) {
+      console.error("Failed to delete permission:", error);
+    }
+  };
+
   const permissions = fileId ? filePermissions : folderPermissions;
 
   return (
@@ -55,17 +69,33 @@ const ViewPermissionsModal: React.FC<ViewPermissionsModalProps> = ({
           Permissions for {fileId ? "File" : "Folder"}
         </Typography>
         <List>
-          {permissions?.map((permission) => (
-            <React.Fragment key={permission.id}>
-              <ListItem>
-                <ListItemText
-                  primary={permission.user.email}
-                  secondary={permission.type}
-                />
-              </ListItem>
-              <Divider />
-            </React.Fragment>
-          ))}
+          {permissions?.length ? (
+            permissions.map((permission) => (
+              <React.Fragment key={permission.id}>
+                <ListItem
+                  secondaryAction={
+                    <Tooltip title="Delete Permission">
+                      <IconButton
+                        edge="end"
+                        aria-label="delete"
+                        onClick={() => handleDeletePermission(permission.id)}
+                      >
+                        <DeleteIcon />
+                      </IconButton>
+                    </Tooltip>
+                  }
+                >
+                  <ListItemText
+                    primary={permission.user.email}
+                    secondary={permission.type}
+                  />
+                </ListItem>
+                <Divider />
+              </React.Fragment>
+            ))
+          ) : (
+            <Typography variant="body1">No Permissions</Typography>
+          )}
         </List>
       </Box>
     </Modal>
