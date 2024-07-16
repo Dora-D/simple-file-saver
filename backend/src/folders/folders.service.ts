@@ -98,7 +98,7 @@ export class FoldersService {
       );
 
       const newFolder = await this.cloneFolderRecursive(
-        folder,
+        folderId,
         uniqueFolderName,
         userId,
       );
@@ -170,10 +170,12 @@ export class FoldersService {
   }
 
   private async cloneFolderRecursive(
-    folder: Folder,
+    folderId: number,
     newName: string,
     userId: number,
   ) {
+    const folder = (await this.getFolderByIdWithRelations(folderId)) as Folder;
+
     const newFolder = this.folderRepository.create({
       name: newName,
       owner: { id: userId },
@@ -184,7 +186,7 @@ export class FoldersService {
       newFolder.childFolders = await Promise.all(
         folder.childFolders.map(async (childFolder) => {
           return this.cloneFolderRecursive(
-            childFolder,
+            childFolder.id,
             childFolder.name,
             userId,
           );
