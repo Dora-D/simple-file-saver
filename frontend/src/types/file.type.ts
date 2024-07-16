@@ -20,5 +20,4 @@ export interface FileUpload {
 export interface FileUpdate {
   name?: string;
   isPublic?: boolean;
-  folderId?: number;
 }

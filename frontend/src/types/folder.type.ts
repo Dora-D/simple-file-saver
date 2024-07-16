@@ -18,5 +18,5 @@ export interface FolderCreate {
 
 export interface FolderUpdate {
   name?: string;
-  parentFolderId?: number;
+  isPublic?: boolean;
 }
