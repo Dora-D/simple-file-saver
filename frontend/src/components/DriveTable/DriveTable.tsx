@@ -8,20 +8,20 @@ import {
   TableRow,
   Paper,
   Typography,
-  IconButton,
-  Tooltip,
   Backdrop,
   CircularProgress,
   Avatar,
   Stack,
+  Box,
 } from "@mui/material";
 import FolderIcon from "@mui/icons-material/Folder";
 import InsertDriveFileIcon from "@mui/icons-material/InsertDriveFile";
-import MoreVertIcon from "@mui/icons-material/MoreVert";
 import { useAppSelector } from "../../hooks/reduxAppHooks";
 import { useSearchQuery } from "../../services/fileManagerApi";
 import { formatFileSize } from "../../utilities/formatFileSize";
 import { useNavigate, useParams } from "react-router-dom";
+import FolderActions from "../FolderActions/FolderActions";
+import FileActions from "../FileActions/FileActions";
 
 const DriveTable: React.FC = () => {
   let { folderId } = useParams();
@@ -45,16 +45,33 @@ const DriveTable: React.FC = () => {
   };
 
   if (isLoading) {
-    <Backdrop
-      sx={{ color: "#fff", zIndex: (theme) => theme.zIndex.drawer + 1 }}
-      open={isLoading}
-    >
-      <CircularProgress color="inherit" />
-    </Backdrop>;
+    return (
+      <Backdrop
+        sx={{ color: "#fff", zIndex: (theme) => theme.zIndex.drawer + 1 }}
+        open
+      >
+        <CircularProgress color="inherit" />
+      </Backdrop>
+    );
   }
 
-  if (!data?.folder) {
-    return null;
+  if (
+    !data?.folder ||
+    (!data.folder?.files?.length && !data.folder.childFolders.length)
+  ) {
+    return (
+      <Box
+        width={"100%"}
+        height={"200px"}
+        display="flex"
+        alignItems="center"
+        justifyContent="center"
+      >
+        <Typography variant="h5">
+          Sorry, but you no have any files or folders
+        </Typography>
+      </Box>
+    );
   }
 
   const { folder } = data;
@@ -69,75 +86,87 @@ const DriveTable: React.FC = () => {
             <TableCell>Owner</TableCell>
             <TableCell>File Type</TableCell>
             <TableCell>File Size</TableCell>
-            <TableCell></TableCell>
+            <TableCell>Actions</TableCell>
           </TableRow>
         </TableHead>
         <TableBody>
-          {folder.childFolders.map(({ name, id, owner, isPublic }) => (
-            <TableRow
-              key={id + name}
-              hover
-              sx={{ cursor: "pointer" }}
-              onClick={() => handleFolderClick(id)}
-            >
-              <TableCell>
-                <Stack direction="row" spacing={1} alignItems="center">
-                  <FolderIcon />
-                  <Typography variant="body2" component="span">
-                    {name}
-                  </Typography>
-                </Stack>
-              </TableCell>
-              <TableCell>{isPublic ? "Yes" : "No"}</TableCell>
-              <TableCell>
-                <Avatar
-                  sx={{ width: 30, height: 30 }}
-                  alt={owner.name}
-                  src={owner.picture}
-                />
-              </TableCell>
-              <TableCell>-</TableCell>
-              <TableCell>-</TableCell>
-              <TableCell>
-                <Tooltip title="Actions">
-                  <IconButton>
-                    <MoreVertIcon />
-                  </IconButton>
-                </Tooltip>
-              </TableCell>
-            </TableRow>
-          ))}
-          {folder.files.map(({ name, id, owner, size, isPublic, exp }) => (
-            <TableRow key={id + name} hover sx={{ cursor: "pointer" }}>
-              <TableCell>
-                <Stack direction="row" spacing={1} alignItems="center">
-                  <InsertDriveFileIcon />
-                  <Typography variant="body2" component="span">
-                    {name}
-                  </Typography>
-                </Stack>
-              </TableCell>
-              <TableCell>
-                <Typography>{isPublic ? "Yes" : "No"}</Typography>
-              </TableCell>
-              <TableCell>
-                <Avatar
-                  sx={{ width: 30, height: 30 }}
-                  alt={owner.name}
-                  src={owner.picture}
-                />
-              </TableCell>
-              <TableCell>{exp.split(".")[1]}</TableCell>
-              <TableCell>{formatFileSize(size)}</TableCell>
-              <TableCell>
-                <Tooltip title="Actions">
-                  <IconButton>
-                    <MoreVertIcon />
-                  </IconButton>
-                </Tooltip>
-              </TableCell>
-            </TableRow>
-          ))}
+          {folder.childFolders.map((folder) => {
+            const { name, id, owner, isPublic } = folder;
+            return (
+              <TableRow
+                key={id + name}
+                hover
+                sx={{ cursor: "pointer" }}
+                onClick={() => handleFolderClick(id)}
+              >
+                <TableCell>
+                  <Stack direction="row" spacing={1} alignItems="center">
+                    <FolderIcon />
+                    <Typography variant="body2" component="span">
+                      {name}
+                    </Typography>
+                  </Stack>
+                </TableCell>
+                <TableCell>{isPublic ? "Yes" : "No"}</TableCell>
+                <TableCell>
+                  <Stack direction="row" alignItems={"center"} spacing={1}>
+                    <Avatar
+                      sx={{ width: 30, height: 30 }}
+                      alt={owner.name}
+                      src={owner.picture}
+                    />
+                    <Typography variant="body2">{owner.email}</Typography>
+                  </Stack>
+                </TableCell>
+                <TableCell>-</TableCell>
+                <TableCell>-</TableCell>
+                <TableCell
+                  onClick={(e) => {
+                    e.stopPropagation();
+                  }}
+                >
+                  <FolderActions folder={folder} />
+                </TableCell>
+              </TableRow>
+            );
+          })}
+          {folder.files.map((file) => {
+            const { name, id, owner, size, isPublic, exp } = file;
+            return (
+              <TableRow key={id + name} hover sx={{ cursor: "pointer" }}>
+                <TableCell>
+                  <Stack direction="row" spacing={1} alignItems="center">
+                    <InsertDriveFileIcon />
+                    <Typography variant="body2" component="span">
+                      {name}
+                    </Typography>
+                  </Stack>
+                </TableCell>
+                <TableCell>
+                  <Typography>{isPublic ? "Yes" : "No"}</Typography>
+                </TableCell>
+                <TableCell>
+                  <Stack direction="row" alignItems={"center"} spacing={1}>
+                    <Avatar
+                      sx={{ width: 30, height: 30 }}
+                      alt={owner.name}
+                      src={owner.picture}
+                    />
+                    <Typography variant="body2">{owner.email}</Typography>
+                  </Stack>
+                </TableCell>
+                <TableCell>{exp.split(".")[1]}</TableCell>
+                <TableCell>{formatFileSize(size)}</TableCell>
+                <TableCell
+                  onClick={(e) => {
+                    e.stopPropagation();
+                  }}
+                >
+                  <FileActions file={file} />
+                </TableCell>
+              </TableRow>
+            );
+          })}
         </TableBody>
       </Table>
     </TableContainer>
