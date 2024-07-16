@@ -22,6 +22,9 @@ import EditFolderModal from "../EditFolderModal/EditFolderModal";
 import ShareModal from "../ShareModal/ShareModal";
 import ViewPermissionsModal from "../ViewPermissionsModal/ViewPermissionsModal";
 import ConfirmDeleteModal from "../ConfirmDeleteModal/ConfirmDeleteModal";
+import { useLocation } from "react-router-dom";
+import { useAppSelector } from "../../hooks/reduxAppHooks";
+import { EPermissionType } from "../../types/permission.type";
 
 interface FolderActionsProps {
   folder: Folder;
@@ -30,12 +33,23 @@ interface FolderActionsProps {
 const FolderActions: React.FC<FolderActionsProps> = ({ folder }) => {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const { pathname } = useLocation();
+  const isAvailable = pathname.includes("available-to-me");
   const [deleteFolder] = useDeleteFolderMutation();
   const [cloneFolder] = useCloneFolderMutation();
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const [isPermissionsModalOpen, setIsPermissionsModalOpen] = useState(false);
   const [isConfirmDeleteModalOpen, setIsConfirmDeleteModalOpen] =
     useState(false);
+  const userId = useAppSelector(({ user }) => user.currentUser?.id);
+
+  const isUserOwner = folder.owner.id === userId;
+  //TOFO: Nedda changes
+  const isUserCanEdit = isUserOwner
+    ? true
+    : isAvailable
+    ? !!folder?.permissions?.some(({ type }) => type === EPermissionType.EDIT)
+    : true;
 
   const handleDelete = () => {
     setIsConfirmDeleteModalOpen(true);
@@ -109,36 +123,46 @@ const FolderActions: React.FC<FolderActionsProps> = ({ folder }) => {
         open={Boolean(anchorEl)}
         onClose={handleMenuClose}
       >
-        <MenuItem onClick={handleShare}>
-          <ListItemIcon>
-            <ShareIcon fontSize="small" />
-          </ListItemIcon>
-          <ListItemText>Share</ListItemText>
-        </MenuItem>
-        <MenuItem onClick={handleViewPermissions}>
-          <ListItemIcon>
-            <VisibilityIcon fontSize="small" />
-          </ListItemIcon>
-          <ListItemText>View Permissions</ListItemText>
-        </MenuItem>
-        <MenuItem onClick={handleEdit}>
-          <ListItemIcon>
-            <EditIcon fontSize="small" />
-          </ListItemIcon>
-          <ListItemText>Edit</ListItemText>
-        </MenuItem>
-        <MenuItem onClick={handleClone}>
-          <ListItemIcon>
-            <ContentCopyIcon fontSize="small" />
-          </ListItemIcon>
-          <ListItemText>Clone</ListItemText>
-        </MenuItem>
-        <MenuItem onClick={handleDelete}>
-          <ListItemIcon>
-            <DeleteIcon fontSize="small" />
-          </ListItemIcon>
-          <ListItemText>Delete</ListItemText>
-        </MenuItem>
+        {isUserOwner && (
+          <MenuItem onClick={handleShare}>
+            <ListItemIcon>
+              <ShareIcon fontSize="small" />
+            </ListItemIcon>
+            <ListItemText>Share</ListItemText>
+          </MenuItem>
+        )}
+        {isUserOwner && (
+          <MenuItem onClick={handleViewPermissions}>
+            <ListItemIcon>
+              <VisibilityIcon fontSize="small" />
+            </ListItemIcon>
+            <ListItemText>View Permissions</ListItemText>
+          </MenuItem>
+        )}
+        {isUserCanEdit && (
+          <MenuItem onClick={handleEdit}>
+            <ListItemIcon>
+              <EditIcon fontSize="small" />
+            </ListItemIcon>
+            <ListItemText>Edit</ListItemText>
+          </MenuItem>
+        )}
+        {isUserCanEdit && (
+          <MenuItem onClick={handleClone}>
+            <ListItemIcon>
+              <ContentCopyIcon fontSize="small" />
+            </ListItemIcon>
+            <ListItemText>Clone</ListItemText>
+          </MenuItem>
+        )}
+        {isUserOwner && (
+          <MenuItem onClick={handleDelete}>
+            <ListItemIcon>
+              <DeleteIcon fontSize="small" />
+            </ListItemIcon>
+            <ListItemText>Delete</ListItemText>
+          </MenuItem>
+        )}
         <MenuItem onClick={handleCopyLink}>
           <ListItemIcon>
             <ContentPasteIcon fontSize="small" />

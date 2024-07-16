@@ -1,5 +1,6 @@
 import { User } from "./user.type";
 import { File } from "./file.type";
+import { Permission } from "./permission.type";
 
 export interface Folder {
   id: number;
@@ -8,6 +9,8 @@ export interface Folder {
   files: File[];
   owner: User;
   parentFolderId?: number;
+  permissions?: Permission[];
+
 }
 
 export interface FolderCreate {
