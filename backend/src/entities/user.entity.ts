@@ -10,17 +10,14 @@ export class User {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column({ nullable: false })
-  provider: Provider;
-
-  @Column({ nullable: false })
-  providerId: string;
-
   @Column()
   name: string;
 
   @Column()
   email: string;
+
+  @Column()
+  picture: string;
 
   @OneToMany(() => File, (file) => file.owner)
   files: File[];
@@ -30,4 +27,7 @@ export class User {
 
   @OneToMany(() => Permission, (permission) => permission.user)
   permissions: Permission[];
+
+  @OneToMany(() => Permission, (permission) => permission.owner)
+  ownerPermissions: Permission[];
 }

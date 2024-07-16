@@ -1,22 +1,24 @@
 version: "3.8"
 
 services:
-  # frontend:
-  #   container_name: frontend
-  #   build:
-  #     context: ./frontend
-  #     target: ${NODE_ENV:-development}
-  #   volumes:
-  #     - ./frontend:/app
-  #     - /app/node_modules
-  #   ports:
-  #     - "3000:3000"
-  #   environment:
-  #     - NODE_ENV=${NODE_ENV}
-  #     - REACT_APP_BACKEND_URL=${REACT_APP_BACKEND_URL}
-  #     # - WATCHPACK_POLLING=${WATCHPACK_POLLING}
-  #   depends_on:
-  #     - backend
+  frontend:
+    container_name: frontend
+    build:
+      context: ./frontend
+      target: ${NODE_ENV:-development}
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=${NODE_ENV}
+      - REACT_APP_BACKEND_URL=${REACT_APP_BACKEND_URL}
+      - REACT_APP_OAUTH_GOOGLE_ID=${OAUTH_GOOGLE_ID}
+      - REACT_APP_OAUTH_GOOGLE_SECRET=${OAUTH_GOOGLE_SECRET}
+      - REACT_APP_SESSION_COOKIE_KEY=${SESSION_COOKIE_KEY}
+    depends_on:
+      - backend
 
   backend:
     build:

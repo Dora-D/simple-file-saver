@@ -11,6 +11,11 @@ async function bootstrap() {
   app.useGlobalPipes(new ValidationPipe());
   app.use(cookieParser(process.env.JWT_SECRET));
 
+  app.enableCors({
+    origin: 'http://localhost:3000',
+    credentials: true,
+  });
+
   const config = new DocumentBuilder()
     .setTitle('File Management API')
     .setDescription('API documentation for file management system')

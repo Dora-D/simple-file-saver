@@ -35,13 +35,17 @@ import {
 import { Response } from 'express';
 import { diskStorage } from 'multer';
 import { extname } from 'path';
+import { PermissionsService } from '@app/permissions/permissions.service';
 
 @UseGuards(JwtAuthGuard)
 @Controller('files')
 @ApiTags('Files')
 @ApiBearerAuth()
 export class FilesController {
-  constructor(private readonly fileService: FilesService) {}
+  constructor(
+    private readonly fileService: FilesService,
+    private readonly permissionsService: PermissionsService,
+  ) {}
 
   @Post('upload')
   @ApiConsumes('multipart/form-data')
@@ -86,6 +90,7 @@ export class FilesController {
   @ApiNotFoundResponse({ description: 'File not found' })
   @ApiUnauthorizedResponse({ description: 'Unauthorized' })
   async cloneFile(@Param('id') id: string, @GetCurrentUserId() userId: number) {
+    await this.permissionsService.checkUserCanEditFile(userId, +id);
     return await this.fileService.clone(+id, userId);
   }
 
@@ -99,7 +104,8 @@ export class FilesController {
     @Param('id') id: string,
     @GetCurrentUserId() userId: number,
   ) {
-    const file = await this.fileService.findOne(+id, userId);
+    await this.permissionsService.checkUserCanReadFile(userId, +id);
+    const file = await this.fileService.findOne(+id);
     return res.status(HttpStatus.OK).json(file);
   }
 
@@ -113,7 +119,8 @@ export class FilesController {
     @GetCurrentUserId() userId: number,
     @Res() res: Response,
   ) {
-    await this.fileService.remove(+id, userId);
+    await this.permissionsService.checkUserFileOwner(userId, +id);
+    await this.fileService.remove(+id);
     return res.status(HttpStatus.OK).send('File Deleted');
   }
 
@@ -128,7 +135,8 @@ export class FilesController {
     @Body() updateFileDto: UpdateFileDto,
     @GetCurrentUserId() userId: number,
   ) {
-    await this.fileService.update(+id, updateFileDto, userId);
+    await this.permissionsService.checkUserCanEditFile(userId, +id);
+    await this.fileService.update(+id, updateFileDto);
     return res.status(HttpStatus.OK).send('File Updated');
   }
 
@@ -143,6 +151,7 @@ export class FilesController {
     @GetCurrentUserId() userId: number,
     @Res({ passthrough: true }) res: Response,
   ) {
-    return await this.fileService.download(res, id, userId);
+    await this.permissionsService.checkUserCanReadFile(userId, +id);
+    return await this.fileService.download(res, +id);
   }
 }

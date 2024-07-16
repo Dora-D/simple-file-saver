@@ -7,7 +7,7 @@ import {
   StreamableFile,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Like, Repository } from 'typeorm';
+import { FindManyOptions, Like, Repository } from 'typeorm';
 import { CreateFileDto } from '@app/files/dto/create-file.dto';
 import { UsersService } from '@app/users/users.service';
 import { User } from '@app/entities/user.entity';
@@ -16,7 +16,6 @@ import { createReadStream } from 'fs';
 import { unlink } from 'fs/promises';
 import { copyFile } from 'fs/promises';
 import * as path from 'path';
-import { PermissionsService } from '@app/permissions/permissions.service';
 
 @Injectable()
 export class FilesService {
@@ -24,8 +23,11 @@ export class FilesService {
     @InjectRepository(File)
     private readonly fileRepository: Repository<File>,
     private readonly usersService: UsersService,
-    private readonly permissionsService: PermissionsService,
   ) {}
+
+  async findManyOptions(params: FindManyOptions<File> = {}) {
+    return await this.fileRepository.find(params);
+  }
 
   async create(
     file: Express.Multer.File,
@@ -49,7 +51,7 @@ export class FilesService {
     );
 
     const newFile = this.fileRepository.create({
-      isPublic: createFileDto.isPublic,
+      isPublic: Boolean(createFileDto.isPublic),
       folder: folderId ? { id: folderId } : undefined,
       owner: user,
       name: uniqueFileName,
@@ -62,31 +64,27 @@ export class FilesService {
     return this.fileRepository.save(newFile);
   }
 
-  async findOne(
-    id: number,
-    userId: number,
-    additionalRelations?: string[],
-    shouldCheckPerm = true,
-  ) {
-    const relations = additionalRelations
-      ? ['owner', ...additionalRelations]
-      : ['owner', 'permissions'];
+  async findFileById(id: number) {
+    return this.fileRepository.findOne({
+      where: { id },
+      relations: ['owner', 'folder'],
+    });
+  }
 
+  async findOne(id: number) {
     const file = await this.fileRepository.findOne({
       where: { id },
-      relations,
+      relations: ['owner'],
     });
-
-    shouldCheckPerm &&
-      (await this.permissionsService.checkUserCanReadFile(userId, id));
 
     return file as File;
   }
 
   async clone(fileId: number, userId: number) {
-    await this.permissionsService.checkUserCanEditFile(userId, fileId);
-
-    const file = await this.findOne(fileId, userId);
+    const file = (await this.fileRepository.findOne({
+      where: { id: fileId },
+      relations: ['owner', 'folder'],
+    })) as File;
 
     try {
       let fileName = file.name;
@@ -115,17 +113,20 @@ export class FilesService {
 
       return await this.fileRepository.save(newFile);
     } catch (error) {
+      console.log(error);
+
       throw new InternalServerErrorException('Failed to clone file');
     }
   }
 
-  async update(id: number, updateFileDto: UpdateFileDto, userId: number) {
+  async update(id: number, updateFileDto: UpdateFileDto) {
     if (!updateFileDto.isPublic && !updateFileDto.name) {
       return;
     }
-    await this.permissionsService.checkUserCanEditFile(userId, id);
 
-    const file = await this.findOne(id, userId);
+    const file = (await this.fileRepository.findOne({
+      where: { id },
+    })) as File;
 
     let fileName = file.name;
 
@@ -142,9 +143,10 @@ export class FilesService {
     return await this.fileRepository.save(file);
   }
 
-  async remove(id: number, userId: number) {
-    await this.permissionsService.checkUserFileOwner(userId, id);
-    const file = await this.findOne(id, userId);
+  async remove(id: number) {
+    const file = (await this.fileRepository.findOne({
+      where: { id },
+    })) as File;
 
     try {
       await unlink(file.path);
@@ -155,10 +157,10 @@ export class FilesService {
     }
   }
 
-  async download(res: Response, id: number | string, userId: number) {
-    await this.permissionsService.checkUserCanReadFile(userId, +id);
-
-    const file = await this.findOne(+id, userId);
+  async download(res: Response, id: number) {
+    const file = (await this.fileRepository.findOne({
+      where: { id },
+    })) as File;
 
     const stream = createReadStream(path.join(process.cwd(), file.path));
 

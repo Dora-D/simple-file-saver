@@ -19,18 +19,17 @@ export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
     _refreshToken: string,
     profile: Profile,
   ) {
-    const { id, name, emails } = profile;
+    const { name, emails, photos } = profile;
+    let user;
 
-    let user = await this.usersService.findOne({
-      where: { provider: 'google', providerId: id },
-    });
+    if (emails && emails[0].value)
+      user = await this.usersService.findOneByEmail(emails[0].value);
 
-    if (!user && name && emails) {
+    if (!user && name && emails && photos) {
       user = await this.usersService.create({
-        provider: 'google',
-        providerId: id,
-        name: name.givenName,
+        name: `${name.givenName} ${name.familyName}`,
         email: emails[0].value,
+        picture: photos[0].value,
       });
     }
 

@@ -1,18 +1,16 @@
 import { Folder } from '@app/entities/folder.entity';
 import { UsersService } from '@app/users/users.service';
 import {
-  ForbiddenException,
   Injectable,
   InternalServerErrorException,
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Like, Repository } from 'typeorm';
+import { FindManyOptions, FindOneOptions, Like, Repository } from 'typeorm';
 
 import { CreateFolderDto } from '@app/folders/dto/create-folder.dto';
 import { UpdateFolderDto } from '@app/folders/dto/update-folder.dto';
 import { FilesService } from '@app/files/files.service';
-import { PermissionsService } from '@app/permissions/permissions.service';
 
 @Injectable()
 export class FoldersService {
@@ -21,8 +19,38 @@ export class FoldersService {
     private folderRepository: Repository<Folder>,
     private readonly userService: UsersService,
     private readonly filesService: FilesService,
-    private readonly permissionsService: PermissionsService,
   ) {}
+
+  async findManyOptions(params: FindManyOptions<Folder> = {}) {
+    return await this.folderRepository.find(params);
+  }
+
+  async findOneOptions(params: FindOneOptions<Folder> = {}) {
+    return await this.folderRepository.findOne(params);
+  }
+
+  async getBreadcrumbs(
+    folderId: number,
+  ): Promise<{ folderName: string; folderId: number }[]> {
+    const breadcrumbs = [];
+
+    let currentFolder: Folder | null = await this.folderRepository.findOne({
+      where: { id: folderId },
+      relations: ['parentFolder'],
+    });
+
+    while (currentFolder) {
+      if (currentFolder) {
+        breadcrumbs.unshift({
+          folderName: currentFolder.name,
+          folderId: currentFolder.id,
+        });
+        currentFolder = currentFolder.parentFolder ?? null;
+      }
+    }
+
+    return breadcrumbs;
+  }
 
   async create(createFolderDto: CreateFolderDto, userId: number) {
     const user = await this.userService.findOne({ where: { id: userId } });
@@ -37,7 +65,6 @@ export class FoldersService {
       parentFolder = await this.folderRepository.findOne({
         where: {
           id: createFolderDto.parentFolderId,
-          owner: user,
         },
       });
 
@@ -62,8 +89,6 @@ export class FoldersService {
   }
 
   async clone(folderId: number, userId: number) {
-    this.permissionsService.checkUserCanEditFolder(userId, folderId);
-
     const folder = (await this.getFolderByIdWithRelations(folderId)) as Folder;
 
     try {
@@ -73,7 +98,7 @@ export class FoldersService {
       );
 
       const newFolder = await this.cloneFolderRecursive(
-        folder,
+        folderId,
         uniqueFolderName,
         userId,
       );
@@ -84,27 +109,24 @@ export class FoldersService {
     }
   }
 
-  async findOne(id: number, userId: number) {
-    const folder = await this.folderRepository.findOne({
+  async findFileById(id: number) {
+    return this.folderRepository.findOne({
       where: { id },
       relations: ['owner'],
     });
+  }
 
-    if (!folder) {
-      throw new NotFoundException('Folder not found');
-    }
-
-    if (folder.owner.id !== userId) {
-      throw new ForbiddenException(
-        'You do not have permission to update this folder',
-      );
-    }
+  async findOne(id: number) {
+    const folder = (await this.folderRepository.findOne({
+      where: { id },
+      relations: ['owner'],
+    })) as Folder;
 
     return folder;
   }
 
-  async update(id: number, updateFolderDto: UpdateFolderDto, userId: number) {
-    const folder = await this.findOne(id, userId);
+  async update(id: number, updateFolderDto: UpdateFolderDto) {
+    const folder = await this.findOne(id);
 
     let name = updateFolderDto.name;
 
@@ -117,18 +139,8 @@ export class FoldersService {
     return await this.folderRepository.save(folder);
   }
 
-  async remove(id: number, userId: number) {
-    const folder = await this.getFolderByIdWithRelations(id);
-
-    if (!folder) {
-      throw new NotFoundException('Folder not found');
-    }
-
-    if (folder.owner.id !== userId) {
-      throw new ForbiddenException(
-        'You do not have permission to delete this folder',
-      );
-    }
+  async remove(id: number) {
+    const folder = (await this.getFolderByIdWithRelations(id)) as Folder;
 
     await this.deleteFolder(folder);
   }
@@ -138,7 +150,7 @@ export class FoldersService {
       const files = await this.filesService.getFilesByFolderId(folder.id);
 
       for (const file of files) {
-        await this.filesService.remove(file.id, folder.owner.id);
+        await this.filesService.remove(file.id);
       }
 
       const childFolders = await this.folderRepository.find({
@@ -158,10 +170,12 @@ export class FoldersService {
   }
 
   private async cloneFolderRecursive(
-    folder: Folder,
+    folderId: number,
     newName: string,
     userId: number,
   ) {
+    const folder = (await this.getFolderByIdWithRelations(folderId)) as Folder;
+
     const newFolder = this.folderRepository.create({
       name: newName,
       owner: { id: userId },
@@ -172,7 +186,7 @@ export class FoldersService {
       newFolder.childFolders = await Promise.all(
         folder.childFolders.map(async (childFolder) => {
           return this.cloneFolderRecursive(
-            childFolder,
+            childFolder.id,
             childFolder.name,
             userId,
           );

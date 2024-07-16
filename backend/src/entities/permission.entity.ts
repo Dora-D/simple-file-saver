@@ -22,6 +22,10 @@ export class Permission {
   @PrimaryGeneratedColumn()
   id: number;
 
+  @ManyToOne(() => User, (user) => user.ownerPermissions)
+  @JoinColumn({ name: 'ownerId' })
+  owner: User;
+
   @ManyToOne(() => User, (user) => user.permissions)
   @JoinColumn({ name: 'userId' })
   user: User;

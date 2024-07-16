@@ -35,6 +35,20 @@ export class PermissionsService {
     private readonly folderService: FoldersService,
   ) {}
 
+  async findByFileId(fileId: number): Promise<Permission[]> {
+    return this.permissionRepository.find({
+      where: { file: { id: fileId } },
+      relations: ['user'],
+    });
+  }
+
+  async findByFolderId(folderId: number): Promise<Permission[]> {
+    return this.permissionRepository.find({
+      where: { folder: { id: folderId } },
+      relations: ['user'],
+    });
+  }
+
   async create(
     createPermissionDto: CreatePermissionDto,
     userId: number,
@@ -64,8 +78,9 @@ export class PermissionsService {
 
     const permission = this.permissionRepository.create({
       user,
+      owner: { id: userId },
       file: fileId ? { id: fileId } : undefined,
-      folder: folderId ? { id: fileId } : undefined,
+      folder: folderId ? { id: folderId } : undefined,
       type: createPermissionDto.type,
     });
 
@@ -75,14 +90,14 @@ export class PermissionsService {
   async findOne(id: number, userId: number): Promise<Permission> {
     const permission = await this.permissionRepository.findOne({
       where: { id },
-      relations: ['user', 'file', 'folder'],
+      relations: ['user', 'file', 'folder', 'owner'],
     });
 
     if (!permission) {
       throw new NotFoundException('Permission not found');
     }
 
-    if (permission.user.id !== userId) {
+    if (permission.owner.id !== userId) {
       throw new ForbiddenException('You do not have permission to check this');
     }
 
@@ -91,7 +106,7 @@ export class PermissionsService {
 
   async findAllByUserId(userId: number) {
     const permissions = await this.findAll({
-      where: { user: { id: userId } },
+      where: { owner: { id: userId } },
       relations: ['file', 'folder'],
     });
 
@@ -169,31 +184,36 @@ export class PermissionsService {
   }
 
   private async checkFilePermission(userId: number, fileId: number) {
-    const file = await this.fileService.findOne(fileId, userId, ['folder']);
+    const file = await this.fileService.findFileById(fileId);
 
     if (!file) {
       throw new NotFoundException('File not found');
     }
 
     const userPermissions = [];
-    const isOwner = file.owner.id === userId;
+    let permissions = file.permissions;
+    const isOwner = file?.owner?.id === userId;
 
     if (isOwner) {
       userPermissions.push(EPermissionType.OWNER);
       return userPermissions;
     }
 
-    if (file?.folder.id) {
+    if (file?.folder?.id) {
       const userFolderPermission = await this.checkFolderPermission(
         userId,
-        file.folder.id,
+        file?.folder?.id,
       );
       if (userFolderPermission.length) {
         userPermissions.push(...userFolderPermission);
       }
     }
 
-    const permissions = await this.findAll({
+    if (file.isPublic) {
+      userPermissions.push(EPermissionType.VIEW);
+    }
+
+    permissions = await this.findAll({
       where: { user: { id: userId }, file },
     });
 
@@ -206,14 +226,16 @@ export class PermissionsService {
     );
 
     if (isUserCanEdit) {
+      userPermissions.push(EPermissionType.VIEW);
       userPermissions.push(EPermissionType.EDIT);
+      return userPermissions;
     }
 
     const isUserCanView = !!permissions.find(
       ({ type }) => type === EPermissionType.VIEW,
     );
 
-    if (isUserCanView) {
+    if (isUserCanView || file.isPublic) {
       userPermissions.push(EPermissionType.VIEW);
     }
 
@@ -264,7 +286,7 @@ export class PermissionsService {
   }
 
   private async checkFolderPermission(userId: number, folderId: number) {
-    const folder = await this.folderService.findOne(folderId, userId);
+    const folder = await this.folderService.findFileById(folderId);
 
     if (!folder) {
       throw new NotFoundException('Folder not found');
@@ -276,6 +298,10 @@ export class PermissionsService {
     if (isOwner) {
       userPermissions.push(EPermissionType.OWNER);
       return userPermissions;
+    }
+
+    if (folder.isPublic) {
+      userPermissions.push(EPermissionType.VIEW);
     }
 
     const permissions = await this.findAll({
@@ -291,7 +317,9 @@ export class PermissionsService {
     );
 
     if (isUserCanEdit) {
+      userPermissions.push(EPermissionType.VIEW);
       userPermissions.push(EPermissionType.EDIT);
+      return userPermissions;
     }
 
     const isUserCanView = !!permissions.find(
