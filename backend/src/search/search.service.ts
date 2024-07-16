@@ -1,7 +1,7 @@
 import { FilesService } from '@app/files/files.service';
 import { FoldersService } from '@app/folders/folders.service';
 import { Injectable } from '@nestjs/common';
-import { ILike } from 'typeorm';
+import { ILike, IsNull, Not } from 'typeorm';
 
 @Injectable()
 export class SearchService {
@@ -47,6 +47,7 @@ export class SearchService {
               ? undefined
               : { name: ILike(`%${query}%`) },
             files: isQueryEmpty ? undefined : { name: ILike(`%${query}%`) },
+            owner: { id: Not(userId) },
             isPublic: true,
           },
         ],
@@ -67,11 +68,15 @@ export class SearchService {
     const folders = await this.folderService.findManyOptions({
       where: [
         {
+          parentFolder: IsNull(),
           name: isQueryEmpty ? undefined : ILike(`%${query}%`),
+          files: { name: isQueryEmpty ? undefined : ILike(`%${query}%`) },
           permissions: { user: { id: userId } },
         },
         {
+          parentFolder: IsNull(),
           name: isQueryEmpty ? undefined : ILike(`%${query}%`),
+          files: { name: isQueryEmpty ? undefined : ILike(`%${query}%`) },
           isPublic: true,
         },
       ],
@@ -81,10 +86,12 @@ export class SearchService {
     const files = await this.fileService.findManyOptions({
       where: [
         {
+          folder: IsNull(),
           name: isQueryEmpty ? undefined : ILike(`%${query}%`),
           permissions: { user: { id: userId } },
         },
         {
+          folder: IsNull(),
           name: isQueryEmpty ? undefined : ILike(`%${query}%`),
           isPublic: true,
         },
@@ -103,14 +110,20 @@ export class SearchService {
   ) {
     if (folderId) {
       const folder = await this.folderService.findOneOptions({
-        where: {
-          id: folderId,
-          childFolders: isQueryEmpty
-            ? undefined
-            : { name: ILike(`%${query}%`) },
-          files: isQueryEmpty ? undefined : { name: ILike(`%${query}%`) },
-          owner: { id: userId },
-        },
+        where: [
+          {
+            id: folderId,
+            childFolders: isQueryEmpty
+              ? undefined
+              : { name: ILike(`%${query}%`) },
+            owner: { id: userId },
+          },
+          {
+            id: folderId,
+            files: isQueryEmpty ? undefined : { name: ILike(`%${query}%`) },
+            owner: { id: userId },
+          },
+        ],
         relations: [
           'owner',
           'permissions',
@@ -129,12 +142,14 @@ export class SearchService {
     const folders = await this.folderService.findManyOptions({
       where: {
         owner: { id: userId },
+        parentFolder: IsNull(),
         name: isQueryEmpty ? undefined : ILike(`%${query}%`),
       },
       relations: ['owner', 'permissions'],
     });
     const files = await this.fileService.findManyOptions({
       where: {
+        folder: IsNull(),
         owner: { id: userId },
         name: isQueryEmpty ? undefined : ILike(`%${query}%`),
       },
