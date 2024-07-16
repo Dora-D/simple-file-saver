@@ -25,7 +25,9 @@ export class Folder {
   @JoinColumn({ name: 'ownerId' })
   owner: User;
 
-  @ManyToOne(() => Folder, (folder) => folder.parentFolder)
+  @ManyToOne(() => Folder, (folder) => folder.parentFolder, {
+    onDelete: 'CASCADE',
+  })
   @JoinColumn({ name: 'parentFolderId' })
   parentFolder?: Folder;
 
@@ -35,9 +37,11 @@ export class Folder {
   })
   childFolders?: Folder[];
 
-  @OneToMany(() => File, (file) => file.folder)
+  @OneToMany(() => File, (file) => file.folder, { onDelete: 'CASCADE' })
   files?: File[];
 
-  @OneToMany(() => Permission, (permission) => permission.folder)
+  @OneToMany(() => Permission, (permission) => permission.folder, {
+    onDelete: 'CASCADE',
+  })
   permissions?: Permission[];
 }

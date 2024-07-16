@@ -32,12 +32,14 @@ export class Permission {
 
   @ManyToOne(() => File, (file) => file.permissions, {
     nullable: true,
+    onDelete: 'CASCADE',
   })
   @JoinColumn({ name: 'fileId' })
   file?: File | null;
 
   @ManyToOne(() => Folder, (folder) => folder.permissions, {
     nullable: true,
+    onDelete: 'CASCADE',
   })
   @JoinColumn({ name: 'folderId' })
   folder?: Folder | null;

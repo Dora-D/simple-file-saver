@@ -42,7 +42,7 @@ const Sidebar = () => {
       <Typography color={green[900]} variant="h4">
         VrealSoft Test Task
       </Typography>
-      <CreateButton />
+      {!isAvailable && <CreateButton />}
       <TextField
         fullWidth
         onChange={handleSearch}

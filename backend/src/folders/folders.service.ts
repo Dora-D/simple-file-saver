@@ -75,6 +75,7 @@ export class FoldersService {
 
     const name = await this.generateUniqueFolderName(
       createFolderDto.name,
+      userId,
       parentFolder?.id,
     );
 
@@ -94,6 +95,7 @@ export class FoldersService {
     try {
       const uniqueFolderName = await this.generateUniqueFolderName(
         folder.name,
+        userId,
         folder?.parentFolder?.id,
       );
 
@@ -125,13 +127,13 @@ export class FoldersService {
     return folder;
   }
 
-  async update(id: number, updateFolderDto: UpdateFolderDto) {
+  async update(id: number, updateFolderDto: UpdateFolderDto, userId: number) {
     const folder = await this.findOne(id);
 
-    let name = updateFolderDto.name;
+    let name = folder.name;
 
-    if (updateFolderDto.name) {
-      name = await this.generateUniqueFolderName(updateFolderDto.name);
+    if (updateFolderDto.name && updateFolderDto.name !== folder.name) {
+      name = await this.generateUniqueFolderName(updateFolderDto.name, userId);
     }
 
     Object.assign(folder, { ...updateFolderDto, name });
@@ -217,10 +219,12 @@ export class FoldersService {
 
   private async generateUniqueFolderName(
     originalName: string,
+    userId: number,
     parentFolderId: number | null = null,
   ): Promise<string> {
     const similarFolders = await this.folderRepository.find({
       where: {
+        owner: { id: userId },
         name: Like(`${originalName}%`),
         parentFolder: parentFolderId ? { id: parentFolderId } : undefined,
       },

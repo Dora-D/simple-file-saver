@@ -70,13 +70,11 @@ export class SearchService {
         {
           parentFolder: IsNull(),
           name: isQueryEmpty ? undefined : ILike(`%${query}%`),
-          files: { name: isQueryEmpty ? undefined : ILike(`%${query}%`) },
           permissions: { user: { id: userId } },
         },
         {
           parentFolder: IsNull(),
           name: isQueryEmpty ? undefined : ILike(`%${query}%`),
-          files: { name: isQueryEmpty ? undefined : ILike(`%${query}%`) },
           isPublic: true,
         },
       ],

@@ -34,11 +34,16 @@ export class File {
   @JoinColumn({ name: 'ownerId' })
   owner: User;
 
-  @ManyToOne(() => Folder, (folder) => folder.files, { nullable: true })
+  @ManyToOne(() => Folder, (folder) => folder.files, {
+    nullable: true,
+    onDelete: 'CASCADE',
+  })
   @JoinColumn({ name: 'folderId' })
   folder: Folder;
 
-  @OneToMany(() => Permission, (permission) => permission.file)
+  @OneToMany(() => Permission, (permission) => permission.file, {
+    onDelete: 'CASCADE',
+  })
   permissions: Permission[];
 
   @Column()

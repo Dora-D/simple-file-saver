@@ -136,7 +136,7 @@ export class FilesController {
     @GetCurrentUserId() userId: number,
   ) {
     await this.permissionsService.checkUserCanEditFile(userId, +id);
-    await this.fileService.update(+id, updateFileDto);
+    await this.fileService.update(+id, updateFileDto, userId);
     return res.status(HttpStatus.OK).send('File Updated');
   }
 

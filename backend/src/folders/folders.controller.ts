@@ -96,7 +96,11 @@ export class FoldersController {
     @GetCurrentUserId() userId: number,
   ) {
     this.permissionsService.checkUserCanEditFolder(userId, +id);
-    const folder = await this.folderService.update(+id, updateFolderDto);
+    const folder = await this.folderService.update(
+      +id,
+      updateFolderDto,
+      userId,
+    );
     return folder;
   }
 

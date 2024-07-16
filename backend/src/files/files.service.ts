@@ -47,6 +47,7 @@ export class FilesService {
 
     const [uniqueFileName, fileExp] = await this.generateUniqueFileName(
       fileName,
+      userId,
       folderId,
     );
 
@@ -89,13 +90,12 @@ export class FilesService {
     try {
       let fileName = file.name;
 
-      if (file.owner.id === userId) {
-        const [newFileName] = await this.generateUniqueFileName(
-          file.name + file.exp,
-          file.folder?.id,
-        );
-        fileName = newFileName;
-      }
+      const [newFileName] = await this.generateUniqueFileName(
+        file.name + file.exp,
+        userId,
+        file.folder?.id,
+      );
+      fileName = newFileName;
 
       const newFilePath = `./uploads/${fileName}-${Date.now()}${file.exp}`;
       await copyFile(file.path, newFilePath);
@@ -119,7 +119,7 @@ export class FilesService {
     }
   }
 
-  async update(id: number, updateFileDto: UpdateFileDto) {
+  async update(id: number, updateFileDto: UpdateFileDto, userId: number) {
     if (!updateFileDto.isPublic && !updateFileDto.name) {
       return;
     }
@@ -133,6 +133,7 @@ export class FilesService {
     if (updateFileDto.name) {
       const [uniqueFileName] = await this.generateUniqueFileName(
         updateFileDto.name + file.exp,
+        userId,
       );
       fileName = uniqueFileName;
     }
@@ -183,6 +184,7 @@ export class FilesService {
 
   private async generateUniqueFileName(
     originalName: string,
+    userId: number,
     folderId?: number,
   ): Promise<string[]> {
     const fileExtName = path.extname(originalName);
@@ -190,6 +192,7 @@ export class FilesService {
 
     const similarFiles = await this.fileRepository.find({
       where: {
+        owner: { id: userId },
         name: Like(`${fileNameWithoutExt}%`),
         folder: folderId ? { id: folderId } : undefined,
         exp: fileExtName,
