@@ -37,7 +37,7 @@ const Sidebar = () => {
       padding={"40px 20px"}
       width={400}
       borderRight={"1px solid"}
-      borderColor={blueGrey[900]}
+      borderColor={blueGrey[100]}
     >
       <Typography color={green[900]} variant="h4">
         VrealSoft Test Task
