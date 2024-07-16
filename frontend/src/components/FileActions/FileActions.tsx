@@ -22,6 +22,7 @@ import {
 import EditFileModal from "../EditFileModal/EditFileModal";
 import ShareModal from "../ShareModal/ShareModal";
 import ViewPermissionsModal from "../ViewPermissionsModal/ViewPermissionsModal";
+import ContentPasteIcon from "@mui/icons-material/ContentPaste";
 
 interface FileActionsProps {
   file: File;
@@ -83,6 +84,12 @@ const FileActions: React.FC<FileActionsProps> = ({ file }) => {
         link.remove();
         window.URL.revokeObjectURL(url);
       });
+  };
+
+  const handleCopyLink = () => {
+    const baseUrl = "/drive/available-to-me";
+    const link = `${baseUrl}/file/${file.id}`;
+    navigator.clipboard.writeText(link);
   };
 
   const handleDelete = async () => {
@@ -151,6 +158,12 @@ const FileActions: React.FC<FileActionsProps> = ({ file }) => {
             <DeleteIcon fontSize="small" />
           </ListItemIcon>
           <ListItemText>Delete</ListItemText>
+        </MenuItem>
+        <MenuItem onClick={handleCopyLink}>
+          <ListItemIcon>
+            <ContentPasteIcon fontSize="small" />
+          </ListItemIcon>
+          <ListItemText>Copy Link</ListItemText>
         </MenuItem>
       </Menu>
       <ViewPermissionsModal
