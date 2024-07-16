@@ -23,6 +23,7 @@ import EditFileModal from "../EditFileModal/EditFileModal";
 import ShareModal from "../ShareModal/ShareModal";
 import ViewPermissionsModal from "../ViewPermissionsModal/ViewPermissionsModal";
 import ContentPasteIcon from "@mui/icons-material/ContentPaste";
+import ConfirmDeleteModal from "../ConfirmDeleteModal/ConfirmDeleteModal";
 
 interface FileActionsProps {
   file: File;
@@ -37,6 +38,12 @@ const FileActions: React.FC<FileActionsProps> = ({ file }) => {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const [isPermissionsModalOpen, setIsPermissionsModalOpen] = useState(false);
+  const [isConfirmDeleteModalOpen, setIsConfirmDeleteModalOpen] =
+    useState(false);
+
+  const handleDelete = () => {
+    setIsConfirmDeleteModalOpen(true);
+  };
 
   const handleViewPermissions = () => {
     setIsPermissionsModalOpen(true);
@@ -87,12 +94,12 @@ const FileActions: React.FC<FileActionsProps> = ({ file }) => {
   };
 
   const handleCopyLink = () => {
-    const baseUrl = "/drive/available-to-me";
+    const baseUrl = `${window.location.origin}/drive/available-to-me`;
     const link = `${baseUrl}/file/${file.id}`;
     navigator.clipboard.writeText(link);
   };
 
-  const handleDelete = async () => {
+  const handleConfirmDelete = async () => {
     try {
       await deleteFile(file.id).unwrap();
     } catch (err) {
@@ -104,8 +111,7 @@ const FileActions: React.FC<FileActionsProps> = ({ file }) => {
 
   const handleClone = async () => {
     try {
-      const clonedFile = await cloneFile(file.id).unwrap();
-      console.log("clonedFile", clonedFile);
+      await cloneFile(file.id).unwrap();
     } catch (err) {
       console.error(err);
     } finally {
@@ -166,6 +172,13 @@ const FileActions: React.FC<FileActionsProps> = ({ file }) => {
           <ListItemText>Copy Link</ListItemText>
         </MenuItem>
       </Menu>
+      <ConfirmDeleteModal
+        open={isConfirmDeleteModalOpen}
+        onClose={() => setIsConfirmDeleteModalOpen(false)}
+        onConfirm={handleConfirmDelete}
+        itemName={file.name}
+        itemType="file"
+      />
       <ViewPermissionsModal
         open={isPermissionsModalOpen}
         onClose={handleClosePermissionsModal}

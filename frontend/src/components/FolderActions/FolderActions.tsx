@@ -10,6 +10,7 @@ import MoreVertIcon from "@mui/icons-material/MoreVert";
 import DeleteIcon from "@mui/icons-material/Delete";
 import EditIcon from "@mui/icons-material/Edit";
 import ShareIcon from "@mui/icons-material/Share";
+import ContentPasteIcon from "@mui/icons-material/ContentPaste";
 import ContentCopyIcon from "@mui/icons-material/ContentCopy";
 import VisibilityIcon from "@mui/icons-material/Visibility";
 import {
@@ -20,6 +21,7 @@ import { Folder } from "../../types/folder.type";
 import EditFolderModal from "../EditFolderModal/EditFolderModal";
 import ShareModal from "../ShareModal/ShareModal";
 import ViewPermissionsModal from "../ViewPermissionsModal/ViewPermissionsModal";
+import ConfirmDeleteModal from "../ConfirmDeleteModal/ConfirmDeleteModal";
 
 interface FolderActionsProps {
   folder: Folder;
@@ -32,6 +34,12 @@ const FolderActions: React.FC<FolderActionsProps> = ({ folder }) => {
   const [cloneFolder] = useCloneFolderMutation();
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const [isPermissionsModalOpen, setIsPermissionsModalOpen] = useState(false);
+  const [isConfirmDeleteModalOpen, setIsConfirmDeleteModalOpen] =
+    useState(false);
+
+  const handleDelete = () => {
+    setIsConfirmDeleteModalOpen(true);
+  };
 
   const handleViewPermissions = () => {
     setIsPermissionsModalOpen(true);
@@ -65,7 +73,7 @@ const FolderActions: React.FC<FolderActionsProps> = ({ folder }) => {
     setAnchorEl(null);
   };
 
-  const handleDelete = async () => {
+  const handleConfirmDelete = async () => {
     try {
       await deleteFolder(folder.id).unwrap();
     } catch (err) {
@@ -77,13 +85,18 @@ const FolderActions: React.FC<FolderActionsProps> = ({ folder }) => {
 
   const handleClone = async () => {
     try {
-      const clonedFolder = await cloneFolder(folder.id).unwrap();
-      console.log("clonedFolder", clonedFolder);
+      await cloneFolder(folder.id).unwrap();
     } catch (err) {
       console.error(err);
     } finally {
       handleMenuClose();
     }
+  };
+
+  const handleCopyLink = () => {
+    const baseUrl = `${window.location.origin}/drive/available-to-me`;
+    const link = `${baseUrl}/folder/${folder.id}`;
+    navigator.clipboard.writeText(link);
   };
 
   return (
@@ -126,7 +139,20 @@ const FolderActions: React.FC<FolderActionsProps> = ({ folder }) => {
           </ListItemIcon>
           <ListItemText>Delete</ListItemText>
         </MenuItem>
+        <MenuItem onClick={handleCopyLink}>
+          <ListItemIcon>
+            <ContentPasteIcon fontSize="small" />
+          </ListItemIcon>
+          <ListItemText>Copy Link</ListItemText>
+        </MenuItem>
       </Menu>
+      <ConfirmDeleteModal
+        open={isConfirmDeleteModalOpen}
+        onClose={() => setIsConfirmDeleteModalOpen(false)}
+        onConfirm={handleConfirmDelete}
+        itemName={folder.name}
+        itemType="folder"
+      />
       <ViewPermissionsModal
         open={isPermissionsModalOpen}
         onClose={handleClosePermissionsModal}
