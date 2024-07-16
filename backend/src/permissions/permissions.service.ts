@@ -178,21 +178,25 @@ export class PermissionsService {
 
     const userPermissions = [];
     let permissions = file.permissions;
-    const isOwner = file.owner.id === userId;
+    const isOwner = file?.owner?.id === userId;
 
     if (isOwner) {
       userPermissions.push(EPermissionType.OWNER);
       return userPermissions;
     }
 
-    if (file?.folder.id) {
+    if (file?.folder?.id) {
       const userFolderPermission = await this.checkFolderPermission(
         userId,
-        file.folder.id,
+        file?.folder?.id,
       );
       if (userFolderPermission.length) {
         userPermissions.push(...userFolderPermission);
       }
+    }
+
+    if (file.isPublic) {
+      userPermissions.push(EPermissionType.VIEW);
     }
 
     permissions = await this.findAll({
@@ -282,6 +286,10 @@ export class PermissionsService {
       return userPermissions;
     }
 
+    if (folder.isPublic) {
+      userPermissions.push(EPermissionType.VIEW);
+    }
+
     const permissions = await this.findAll({
       where: { user: { id: userId }, folder },
     });
@@ -304,7 +312,7 @@ export class PermissionsService {
       ({ type }) => type === EPermissionType.VIEW,
     );
 
-    if (isUserCanView || folder.isPublic) {
+    if (isUserCanView) {
       userPermissions.push(EPermissionType.VIEW);
     }
 
