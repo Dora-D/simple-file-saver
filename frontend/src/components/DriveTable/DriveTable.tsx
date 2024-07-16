@@ -22,6 +22,7 @@ import { formatFileSize } from "../../utilities/formatFileSize";
 import { useNavigate, useParams } from "react-router-dom";
 import FolderActions from "../FolderActions/FolderActions";
 import FileActions from "../FileActions/FileActions";
+import { blueGrey } from "@mui/material/colors";
 
 const DriveTable: React.FC = () => {
   let { folderId } = useParams();
@@ -67,7 +68,7 @@ const DriveTable: React.FC = () => {
         alignItems="center"
         justifyContent="center"
       >
-        <Typography variant="h5">
+        <Typography color={blueGrey[900]} variant="h5">
           Sorry, but you no have any files or folders
         </Typography>
       </Box>
