@@ -39,7 +39,7 @@ export const fileManagerApi = createApi({
         method: "PUT",
         data: data,
       }),
-      invalidatesTags: (result, error, { id }) => [{ type: "Files", id }],
+      invalidatesTags: ["Files"],
     }),
     deleteFile: builder.mutation<void, number>({
       query: (id) => ({ url: `/files/${id}`, method: "DELETE" }),
@@ -74,7 +74,7 @@ export const fileManagerApi = createApi({
         method: "PUT",
         data,
       }),
-      invalidatesTags: (result, error, { id }) => [{ type: "Folders", id }],
+      invalidatesTags: ["Folders"],
     }),
     deleteFolder: builder.mutation<void, number>({
       query: (id) => ({
