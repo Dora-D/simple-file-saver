@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useAppSelector } from "../../hooks/reduxAppHooks";
 import { useSearchQuery } from "../../services/fileManagerApi";
-import { Link as RouterLink, useParams } from "react-router-dom";
+import { Link as RouterLink, useLocation, useParams } from "react-router-dom";
 import { blueGrey } from "@mui/material/colors";
 import {
   Link,
@@ -10,19 +10,22 @@ import {
 } from "@mui/material";
 import NavigateNextIcon from "@mui/icons-material/NavigateNext";
 
-const initianBreadcrumb = [
-  <Link
-    key={"drive"}
-    underline="none"
-    color={blueGrey[900]}
-    component={RouterLink}
-    to={"/drive"}
-  >
-    <Typography variant="h5">My Drive</Typography>
-  </Link>,
-];
-
 const Breadcrumbs = () => {
+  const { pathname } = useLocation();
+  const isAvailable = pathname.includes("available-to-me");
+
+  const initianBreadcrumb = [
+    <Link
+      key={"drive"}
+      underline="none"
+      color={blueGrey[900]}
+      component={RouterLink}
+      to={isAvailable ? "/drive/available-to-me" : "/drive"}
+    >
+      <Typography variant="h5">My Drive</Typography>
+    </Link>,
+  ];
+
   const [breadcrumbs, setBreadcrumbs] = useState(initianBreadcrumb);
 
   const params = useParams();
@@ -37,6 +40,7 @@ const Breadcrumbs = () => {
 
   useEffect(() => {
     if (data?.breadcrumbs && data.breadcrumbs.length) {
+      const to = isAvailable ? "/drive/available-to-me" : "/drive";
       const newBreadcrumbs = data.breadcrumbs.map(
         ({ folderId, folderName }) => (
           <Link
@@ -44,13 +48,16 @@ const Breadcrumbs = () => {
             underline="none"
             color={blueGrey[900]}
             component={RouterLink}
-            to={`/drive/folder/${folderId}`}
+            to={`${to}/folder/${folderId}`}
           >
             <Typography variant="h5">{folderName}</Typography>
           </Link>
         )
       );
       setBreadcrumbs([...initianBreadcrumb, ...newBreadcrumbs]);
+    }
+    if (!params.folderId) {
+      setBreadcrumbs(initianBreadcrumb);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [data, params]);
