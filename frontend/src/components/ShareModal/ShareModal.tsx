@@ -54,7 +54,7 @@ const ShareModal: React.FC<ShareModalProps> = ({
   return (
     <Modal open={open} onClose={onClose}>
       <Stack
-        spacing={2}
+        spacing={3}
         sx={{
           position: "absolute",
           top: "50%",
@@ -73,16 +73,21 @@ const ShareModal: React.FC<ShareModalProps> = ({
           label="Email"
           variant="outlined"
           fullWidth
-          margin="normal"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
         />
-        <FormControl fullWidth margin="normal">
-          <InputLabel id="permission-type-label">Permission Type</InputLabel>
+        <FormControl fullWidth>
+          <InputLabel
+            sx={{ top: "-10px", left: "-13px" }}
+            id="permission-type-label"
+          >
+            Permission Type
+          </InputLabel>
           <Select
             labelId="permission-type-label"
-            id="permission-type-select"
+            // id="permission-type-select"
             value={permissionType}
+            variant="outlined"
             onChange={(e) =>
               setPermissionType(e.target.value as PermissionType)
             }
@@ -96,7 +101,7 @@ const ShareModal: React.FC<ShareModalProps> = ({
           <Button
             variant="contained"
             onClick={handleShare}
-            disabled={isLoading}
+            disabled={isLoading || !email || !permissionType}
           >
             Share
           </Button>

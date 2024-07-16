@@ -23,6 +23,10 @@ import EditFileModal from "../EditFileModal/EditFileModal";
 import ShareModal from "../ShareModal/ShareModal";
 import ViewPermissionsModal from "../ViewPermissionsModal/ViewPermissionsModal";
 import ContentPasteIcon from "@mui/icons-material/ContentPaste";
+import ConfirmDeleteModal from "../ConfirmDeleteModal/ConfirmDeleteModal";
+import { useLocation } from "react-router-dom";
+import { EPermissionType } from "../../types/permission.type";
+import { useAppSelector } from "../../hooks/reduxAppHooks";
 
 interface FileActionsProps {
   file: File;
@@ -30,6 +34,8 @@ interface FileActionsProps {
 
 const FileActions: React.FC<FileActionsProps> = ({ file }) => {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const { pathname } = useLocation();
+  const isAvailable = pathname.includes("available-to-me");
   // TODO: need to change or no use in rtk
   const { refetch: downloadFile } = useDownloadFileQuery(file.id);
   const [deleteFile] = useDeleteFileMutation();
@@ -37,6 +43,23 @@ const FileActions: React.FC<FileActionsProps> = ({ file }) => {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const [isPermissionsModalOpen, setIsPermissionsModalOpen] = useState(false);
+  const [isConfirmDeleteModalOpen, setIsConfirmDeleteModalOpen] =
+    useState(false);
+
+  const userId = useAppSelector(({ user }) => user.currentUser?.id);
+
+  const isUserOwner = file.owner.id === userId;
+
+  //TOFO: Nedda changes
+  const isUserCanEdit = isUserOwner
+    ? true
+    : isAvailable
+    ? !!file?.permissions?.some(({ type }) => type === EPermissionType.EDIT)
+    : true;
+
+  const handleDelete = () => {
+    setIsConfirmDeleteModalOpen(true);
+  };
 
   const handleViewPermissions = () => {
     setIsPermissionsModalOpen(true);
@@ -87,12 +110,12 @@ const FileActions: React.FC<FileActionsProps> = ({ file }) => {
   };
 
   const handleCopyLink = () => {
-    const baseUrl = "/drive/available-to-me";
+    const baseUrl = `${window.location.origin}/drive/available-to-me`;
     const link = `${baseUrl}/file/${file.id}`;
     navigator.clipboard.writeText(link);
   };
 
-  const handleDelete = async () => {
+  const handleConfirmDelete = async () => {
     try {
       await deleteFile(file.id).unwrap();
     } catch (err) {
@@ -104,8 +127,7 @@ const FileActions: React.FC<FileActionsProps> = ({ file }) => {
 
   const handleClone = async () => {
     try {
-      const clonedFile = await cloneFile(file.id).unwrap();
-      console.log("clonedFile", clonedFile);
+      await cloneFile(file.id).unwrap();
     } catch (err) {
       console.error(err);
     } finally {
@@ -129,36 +151,46 @@ const FileActions: React.FC<FileActionsProps> = ({ file }) => {
           </ListItemIcon>
           <ListItemText>Download</ListItemText>
         </MenuItem>
-        <MenuItem onClick={handleShare}>
-          <ListItemIcon>
-            <ShareIcon fontSize="small" />
-          </ListItemIcon>
-          <ListItemText>Share</ListItemText>
-        </MenuItem>
-        <MenuItem onClick={handleViewPermissions}>
-          <ListItemIcon>
-            <VisibilityIcon fontSize="small" />
-          </ListItemIcon>
-          <ListItemText>View Permissions</ListItemText>
-        </MenuItem>
-        <MenuItem onClick={handleEdit}>
-          <ListItemIcon>
-            <EditIcon fontSize="small" />
-          </ListItemIcon>
-          <ListItemText>Edit</ListItemText>
-        </MenuItem>
-        <MenuItem onClick={handleClone}>
-          <ListItemIcon>
-            <ContentCopyIcon fontSize="small" />
-          </ListItemIcon>
-          <ListItemText>Clone</ListItemText>
-        </MenuItem>
-        <MenuItem onClick={handleDelete}>
-          <ListItemIcon>
-            <DeleteIcon fontSize="small" />
-          </ListItemIcon>
-          <ListItemText>Delete</ListItemText>
-        </MenuItem>
+        {isUserOwner && (
+          <MenuItem onClick={handleShare}>
+            <ListItemIcon>
+              <ShareIcon fontSize="small" />
+            </ListItemIcon>
+            <ListItemText>Share</ListItemText>
+          </MenuItem>
+        )}
+        {isUserOwner && (
+          <MenuItem onClick={handleViewPermissions}>
+            <ListItemIcon>
+              <VisibilityIcon fontSize="small" />
+            </ListItemIcon>
+            <ListItemText>View Permissions</ListItemText>
+          </MenuItem>
+        )}
+        {isUserCanEdit && (
+          <MenuItem onClick={handleEdit}>
+            <ListItemIcon>
+              <EditIcon fontSize="small" />
+            </ListItemIcon>
+            <ListItemText>Edit</ListItemText>
+          </MenuItem>
+        )}
+        {isUserCanEdit && (
+          <MenuItem onClick={handleClone}>
+            <ListItemIcon>
+              <ContentCopyIcon fontSize="small" />
+            </ListItemIcon>
+            <ListItemText>Clone</ListItemText>
+          </MenuItem>
+        )}
+        {isUserOwner && (
+          <MenuItem onClick={handleDelete}>
+            <ListItemIcon>
+              <DeleteIcon fontSize="small" />
+            </ListItemIcon>
+            <ListItemText>Delete</ListItemText>
+          </MenuItem>
+        )}
         <MenuItem onClick={handleCopyLink}>
           <ListItemIcon>
             <ContentPasteIcon fontSize="small" />
@@ -166,6 +198,13 @@ const FileActions: React.FC<FileActionsProps> = ({ file }) => {
           <ListItemText>Copy Link</ListItemText>
         </MenuItem>
       </Menu>
+      <ConfirmDeleteModal
+        open={isConfirmDeleteModalOpen}
+        onClose={() => setIsConfirmDeleteModalOpen(false)}
+        onConfirm={handleConfirmDelete}
+        itemName={file.name}
+        itemType="file"
+      />
       <ViewPermissionsModal
         open={isPermissionsModalOpen}
         onClose={handleClosePermissionsModal}

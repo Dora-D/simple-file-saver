@@ -29,13 +29,13 @@ export const permissionsApi = createApi({
 
     getPermissionsByFolderId: builder.query<Permission[], number>({
       query: (folderId) => ({ url: `/folder/${folderId}`, method: "GET" }),
-      providesTags: (result, error, folderId) => ["Permissions"],
+      providesTags: ["Permissions"],
     }),
     createPermission: builder.mutation<Permission, CreatePermissionRequest>({
       query: (data) => ({
         url: "",
         method: "POST",
-        body: data,
+        data,
       }),
       invalidatesTags: ["Permissions"],
     }),
@@ -46,7 +46,7 @@ export const permissionsApi = createApi({
       query: ({ id, data }) => ({
         url: `/${id}`,
         method: "PUT",
-        body: data,
+        data,
       }),
       invalidatesTags: ["Permissions"],
     }),

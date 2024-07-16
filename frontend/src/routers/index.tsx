@@ -2,6 +2,7 @@ import { createBrowserRouter } from "react-router-dom";
 import Login from "../components/Login/Login";
 import ProtectedRoute from "../components/ProtectedRoute/ProtectedRoute";
 import Drive from "../components/Drive/Drive";
+import FilePage from "../components/FilePage/FilePage";
 
 const router = createBrowserRouter([
   {
@@ -26,6 +27,10 @@ const router = createBrowserRouter([
       {
         path: "/drive/available-to-me/folder/:folderId",
         element: <Drive />,
+      },
+      {
+        path: "/drive/available-to-me/file/:fileId",
+        element: <FilePage />,
       },
     ],
   },
